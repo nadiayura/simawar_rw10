@@ -13,8 +13,11 @@ Sistem Informasi Pengelolaan Layanan Warga berbasis website yang terintegrasi de
 ## Latar Belakang & Permasalahan
 
 Pelayanan administrasi dan sosial pada skala Rukun Warga (RW) seperti pengaduan lingkungan, pembayaran iuran bulanan, pengajuan surat keterangan, pencatatan kegiatan sosial (Posyandu, Posbindu, Karang Taruna), serta rekapitulasi keuangan umumnya masih dilakukan secara manual. Hal ini berpotensi menyebabkan:
+
 1.Laporan pengaduan warga sering tidak terdokumentasi dan terlewat.
+
 2.Pembayaran iuran dan pencatatan kas RT/RW rentan terhadap kesalahan rekapitulasi dan duplikasi data.
+
 3.Informasi status permohonan surat maupun pengaduan tidak tersampaikan secara *real-time*.
 
 Aplikasi ini dikembangkan untuk mengintegrasikan seluruh alur layanan warga ke dalam **satu platform terpusat berbasis web** dengan **notifikasi otomatis via WhatsApp Gateway**.
