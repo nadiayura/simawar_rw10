@@ -1,66 +1,104 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistem Informasi Pengelolaan Layanan Warga RW 010 Kelurahan Tanah Baru
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+![Laravel](https://img.shields.io/badge/Laravel-v12.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-v8.4-777BB4?style=for-the-badge&logo=php&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4.1-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-v8.4-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-## About Laravel
+Sistem Informasi Pengelolaan Layanan Warga berbasis website yang terintegrasi dengan **WhatsApp Gateway** untuk efisiensi, transparansi, dan otomatisasi administrasi serta kegiatan sosial di lingkungan RW 010, Kelurahan Tanah Baru, Kecamatan Beji, Kota Depok.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Latar Belakang & Permasalahan
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Pelayanan administrasi dan sosial pada skala Rukun Warga (RW) seperti pengaduan lingkungan, pembayaran iuran bulanan, pengajuan surat keterangan, pencatatan kegiatan sosial (Posyandu, Posbindu, Karang Taruna), serta rekapitulasi keuangan umumnya masih dilakukan secara manual. Hal ini berpotensi menyebabkan:
+1.Laporan pengaduan warga sering tidak terdokumentasi dan terlewat.
+2.Pembayaran iuran dan pencatatan kas RT/RW rentan terhadap kesalahan rekapitulasi dan duplikasi data.
+3.Informasi status permohonan surat maupun pengaduan tidak tersampaikan secara *real-time*.
 
-## Learning Laravel
+Aplikasi ini dikembangkan untuk mengintegrasikan seluruh alur layanan warga ke dalam **satu platform terpusat berbasis web** dengan **notifikasi otomatis via WhatsApp Gateway**.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Fitur Utama
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Sistem ini terbagi menjadi 4 modul terpadu:
+### 1. Modul Manajemen Data & Hak Akses
+* Pembagian akses untuk **Admin RW**, **Admin RT**, dan **Warga**.
+* Registrasi mandiri warga yang tervalidasi oleh Ketua RT.
+* Pengelolaan struktur organisasi RT dan RW.
 
-## Laravel Sponsors
+### 2. Modul Layanan Warga
+* Pengajuan laporan masalah lingkungan dilengkapi dengan pelacakan status *real-time* dan *feedback* pasca-layanan.
+* Pendataan dan permohonan surat keterangan warga (Domisili, Pengantar RT/RW, dll.).
+* Pengumuman & rekapitulasi kegiatan Karang Taruna, Posyandu, dan Posbindu.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 3. Modul Keuangan & Pembayaran
+* Pembuatan tagihan iuran otomatis per periode.
+* Pembayaran iuran secara tunai *offline* maupun *online* via Payment Gateway (**Midtrans**).
+* Mencegah pembayaran loncat bulan jika terdapat tunggakan.
+* Sinkronisasi otomatis pemasukan iuran, pencatatan pengeluaran, serta ekspor Laporan Keuangan ke format PDF.
 
-### Premium Partners
+### 4. Modul Integrasi WhatsApp Gateway (Fonnte)
+* Pemberitahuan otomatis ketika status laporan atau pengajuan surat diperbarui.
+* Pengingat tagihan iuran bulanan langsung ke WhatsApp warga.
+* Verifikasi keamanan kata sandi melalui kode OTP via WhatsApp.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+---
 
-## Contributing
+## Tech Stack & Spesifikasi
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+* **Framework Backend**: Laravel v12.x
+* **Bahasa Pemrograman**: PHP v8.4.13
+* **Database**: MySQL v8.4.3
+* **Frontend**: Tailwind CSS v4.1, HTML5, JavaScript
+* **Database Client**: DBeaver
+* **Server Environment**: Laragon v8.0.0 / Localhost
+* **Third-Party Integrations**:
+  * **WhatsApp Gateway**: Fonnte API
+  * **Payment Gateway**: Midtrans API
+  * **Testing Method**: Blackbox Testing
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Arsitektur & Metodologi Sistem
 
-## Security Vulnerabilities
+Penelitian dan pengembangan aplikasi ini menggunakan metode **Rapid Application Development (RAD)** yang terdiri dari 5 fase:
+1. **Pemodelan Bisnis**: Observasi dan wawancara alur layanan RW 010.
+2. **Pemodelan Data**: Perancangan ERD (*Entity Relationship Diagram*) & Class Diagram.
+3. **Pemodelan Proses**: Perancangan UML (*Use Case, Activity Diagram, Sequence Diagram*).
+4. **Pembentukan Aplikasi**: Pembangunan modul web Laravel & integrasi WhatsApp API.
+5. **Pengujian & Turnover**: Pengujian fungsi menggunakan **Blackbox Testing**.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## Cara Instalasi & Menjalankan Project
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Prasyarat:
+* PHP >= 8.2
+* Composer
+* MySQL / MariaDB
+* Node.js & NPM
+
+### Langkah-langkah:
+
+1. **Clone Repositori**
+   ```bash
+   git clone [https://github.com/username/sistem-layanan-warga-rw010.git](https://github.com/username/sistem-layanan-warga-rw010.git)
+   cd sistem-layanan-warga-rw010
+2. **Install Dependensi PHP & Frontend**
+    ```bash
+    composer install
+    npm install && npm run build
+3. **Konfigurasi Environment (.env)**
+    ```bash
+    Buat file .env
+    Atur koneksi database dan kredensial API pada file .env:
+4. **Generate Application Key & Migrasi Database**
+    ```bash
+    php artisan key:generate
+    php artisan migrate --seed
+5. **Jalankan Development Server**
+    ```bash
+    php artisan serve
