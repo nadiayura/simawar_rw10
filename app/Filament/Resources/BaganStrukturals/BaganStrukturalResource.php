@@ -2,30 +2,23 @@
 
 namespace App\Filament\Resources\BaganStrukturals;
 
-use App\Filament\Resources\BaganStrukturals\Pages;
 use App\Models\Struktural;
 use BackedEnum;
-use Filament\Facades\Filament;
-use Illuminate\Support\Facades\Auth;
-use Filament\Panel;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use UnitEnum;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+use UnitEnum;
 
 class BaganStrukturalResource extends Resource
 {
     protected static ?string $model = Struktural::class;
 
-    // Menentukan relasi yang digunakan untuk tenant ownership
-    protected static ?string $tenantOwnershipRelationshipName = 'warga';
-
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUser;
 
-
-    protected static string |UnitEnum|null $navigationGroup = 'Manajemen Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Manajemen Data';
 
     protected static ?string $navigationLabel = 'Bagan Struktural';
 
@@ -71,6 +64,7 @@ class BaganStrukturalResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Auth::user();
+
         // Only allow RT (Ketua RT) to view the structural chart
         return $user && $user->role->isRT();
     }

@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -15,7 +15,7 @@ return new class extends Migration
         // First, clear any existing data that might cause JSON conversion issues
         DB::table('keg_kesehatans')->update([
             'rincian_peserta' => '{"anak":0,"bayi":0,"ibu_hamil":0,"remaja":0}',
-            'aktivitas_dilakukan' => '[]'
+            'aktivitas_dilakukan' => '[]',
         ]);
 
         Schema::table('keg_kesehatans', function (Blueprint $table) {

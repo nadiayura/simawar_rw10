@@ -4,14 +4,10 @@ namespace App\Filament\Resources\Pengaduans\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\ImageColumn;
-use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-
-use function Laravel\Prompts\select;
 
 class PengaduansTable
 {
@@ -29,18 +25,34 @@ class PengaduansTable
                 ImageColumn::make('bukti')
                     ->label('Bukti')
                     ->visibility('public'),
-                TextColumn::make('jenis_pengaduan'),
+                TextColumn::make('jenisPengaduan.nama')
+                    ->label('Jenis Pengaduan')
+                    ->badge()
+                    ->searchable()
+                    ->sortable()
+                    ->color(fn (string $state): string => match ($state) {
+                        'keamanan' => 'primary',
+                        'kebersihan' => 'info',
+                        'kesehatan' => 'success',
+                        'infrastruktur' => 'danger',
+                        'sosial' => 'danger',
+                        'pendidikan' => 'danger',
+                    }),
                 TextColumn::make('jdl_pengaduan')
                     ->label('Judul Pengaduan'),
-                TextColumn::make('status')
+                TextColumn::make('solusi_admin')
+                    ->label('Solusi Admin')
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('status.keterangan')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'primary',
-                        'diproses' => 'info',
-                        'selesai' => 'success',
-                        'ditolak' => 'danger',
+                        'Pending' => 'zinc',
+                        'Diverifikasi' => 'info',
+                        'Diproses' => 'primary',
+                        'Ditolak' => 'danger',
+                        'Selesai' => 'success',
                     }),
-
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -55,7 +67,6 @@ class PengaduansTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

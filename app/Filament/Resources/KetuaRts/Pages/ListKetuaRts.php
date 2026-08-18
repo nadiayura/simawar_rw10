@@ -5,7 +5,6 @@ namespace App\Filament\Resources\KetuaRts\Pages;
 use App\Filament\Resources\KetuaRts\KetuaRtResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 
 class ListKetuaRts extends ListRecords
@@ -14,13 +13,9 @@ class ListKetuaRts extends ListRecords
 
     public function mount(): void
     {
+        // Hapus blok yang melempar AuthorizationException untuk RT
         // Check authorization before mounting the page
-        $user = auth()->user();
-        
-        if (!$user || !$user->role || $user->role->isRT()) {
-            throw new AuthorizationException('You do not have permission to access this resource.');
-        }
-        
+
         parent::mount();
     }
 

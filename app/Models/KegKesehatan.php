@@ -6,14 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class KegKesehatan extends Model
 {
-    /**
-     * The table associated with the model.
-     */
+    protected $primaryKey = 'keg_kesehatan_id';
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected $table = 'keg_kesehatans';
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'jenis_kegiatan',
         'nama_kegiatan',
@@ -24,60 +24,40 @@ class KegKesehatan extends Model
         'aktivitas_dilakukan',
         'hasil_pelaksanaan',
         'dokumentasi',
-        'status_kegiatan',
-        'tenant_id',
+        'status_id',
     ];
 
-    /**
-     * The attributes that should be cast.
-     */
     protected $casts = [
         'tgl' => 'date',
         'jumlah_peserta' => 'integer',
-        'status_kegiatan' => 'string',
         'rincian_peserta' => 'array',
         'aktivitas_dilakukan' => 'string',
         'dokumentasi' => 'array',
     ];
 
-    /**
-     * Konstanta untuk jenis kegiatan.
-     */
     public const JENIS_KEGIATAN = [
         'posyandu' => 'Posyandu',
-        'posmaja' => 'Posmaja',
+        'posbindu' => 'Posbindu',
     ];
 
-    /**
-     * Konstanta untuk aktivitas Posyandu (pink).
-     */
     public const AKTIVITAS_POSYANDU = [
-        'pemeriksaan_balita_ibu_hamil' => 'Pemeriksaan Balita & Ibu Hamil',
+        'balita_ibu_hamil' => 'Pemeriksaan Balita & Ibu Hamil',
         'imunisasi' => 'Imunisasi',
         'pemberian_vitamin' => 'Pemberian Vitamin',
         'penyuluhan_kesehatan' => 'Penyuluhan Kesehatan',
     ];
 
-    /**
-     * Konstanta untuk aktivitas Posmaja (amber).
-     */
-    public const AKTIVITAS_POSMAJA = [
+    public const AKTIVITAS_POSBINDU = [
         'pemeriksaan_tekanan_darah_berat_badan' => 'Pemeriksaan Tekanan Darah & Berat Badan',
         'cek_tht_kesehatan_paru' => 'Cek THT & Kesehatan Paru',
-        'penyuluhan_gaya_hidup_sehat' => 'Penyuluhan Gaya Hidup Sehat',
+        'edukasi_gaya_hidup_sehat' => 'Edukasi Gaya Hidup Sehat',
     ];
 
-    /**
-     * Get the possible values for jenis_kegiatan.
-     */
     public static function getJenisKegiatanOptions(): array
     {
         return self::JENIS_KEGIATAN;
     }
 
-    /**
-     * Get the possible values for status_kegiatan.
-     */
     public static function getStatusKegiatanOptions(): array
     {
         return [
@@ -87,34 +67,25 @@ class KegKesehatan extends Model
         ];
     }
 
-    /**
-     * Get aktivitas options based on jenis kegiatan.
-     */
     public static function getAktivitasOptions(string $jenisKegiatan): array
     {
         return match ($jenisKegiatan) {
             'posyandu' => self::AKTIVITAS_POSYANDU,
-            'posmaja' => self::AKTIVITAS_POSMAJA,
+            'posbindu' => self::AKTIVITAS_POSBINDU,
             default => [],
         };
     }
 
-    /**
-     * Get default rincian peserta structure.
-     */
     public static function getDefaultRincianPeserta(): array
     {
         return [
             'anak' => 0,
             'bayi' => 0,
             'ibu_hamil' => 0,
-            'remaja' => 0,
+            'lansia' => 0,
         ];
     }
 
-    /**
-     * Mutator untuk rincian_peserta.
-     */
     public function setRincianPesertaAttribute($value)
     {
         if (is_array($value)) {
@@ -124,21 +95,17 @@ class KegKesehatan extends Model
         }
     }
 
-    /**
-     * Accessor untuk rincian_peserta.
-     */
     public function getRincianPesertaAttribute($value)
     {
         if (is_string($value)) {
             $decoded = json_decode($value, true);
+
             return $decoded ?: self::getDefaultRincianPeserta();
         }
+
         return $value ?: self::getDefaultRincianPeserta();
     }
 
-    /**
-     * Mutator untuk dokumentasi.
-     */
     public function setDokumentasiAttribute($value)
     {
         if (is_array($value)) {
@@ -148,53 +115,71 @@ class KegKesehatan extends Model
         }
     }
 
-    /**
-     * Accessor untuk dokumentasi.
-     */
     public function getDokumentasiAttribute($value)
     {
         if (is_string($value)) {
             $decoded = json_decode($value, true);
+
             return $decoded ?: [];
         }
+
         return $value ?: [];
     }
 
-    /**
-     * Scope untuk filter berdasarkan status kegiatan.
-     */
+
     public function scopeByStatus($query, $status)
     {
-        return $query->where('status_kegiatan', $status);
+        return $query->where('status_id', $status);
     }
 
-    /**
-     * Scope untuk filter berdasarkan jenis kegiatan.
-     */
     public function scopeByJenis($query, $jenis)
     {
         return $query->where('jenis_kegiatan', $jenis);
     }
 
-    /**
-     * Scope untuk filter berdasarkan tanggal.
-     */
     public function scopeByTanggal($query, $tanggal)
     {
         return $query->whereDate('tgl', $tanggal);
     }
 
-    /**
-     * Scope untuk filter berdasarkan bulan dan tahun.
-     */
+
     public function scopeByBulanTahun($query, $bulan, $tahun)
     {
         return $query->whereMonth('tgl', $bulan)->whereYear('tgl', $tahun);
     }
 
-    // Relationship with Tenant
-    public function tenant()
+    protected static function boot()
     {
-        return $this->belongsTo(Tenant::class);
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->keg_kesehatan_id)) {
+                $baseDate = $model->tgl ? \Carbon\Carbon::parse($model->tgl) : now();
+                $dateStr = $baseDate->format('dmY');
+                $prefix = 'KSHTN-';
+                $last = static::query()
+                    ->where('keg_kesehatan_id', 'like', $prefix.'%')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                $seq = 1;
+                if ($last && is_string($last->keg_kesehatan_id)) {
+                    $parts = explode('-', $last->keg_kesehatan_id);
+                    $num = isset($parts[2]) ? (int) $parts[2] : 0;
+                    if ($num > 0) {
+                        $seq = $num + 1;
+                    }
+                }
+                $model->keg_kesehatan_id = $prefix.$dateStr.'-'.str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
+            }
+            if (empty($model->status_id)) {
+                $default = \App\Models\Status::idForFitur('keg_warga', 'Dijadwalkan')
+                    ?? \App\Models\Status::idByName('Dijadwalkan');
+                $model->status_id = $default;
+            }
+        });
+    }
+
+    public function status()
+    {
+        return $this->belongsTo(Status::class, 'status_id');
     }
 }

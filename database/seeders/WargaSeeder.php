@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
+use App\Models\Iuran;
+use App\Models\NoRt;
 use App\Models\Warga;
+use Illuminate\Database\Seeder;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class WargaSeeder extends Seeder
 {
@@ -13,132 +15,119 @@ class WargaSeeder extends Seeder
      */
     public function run(): void
     {
-        $wargaData = [
-            [
-                'nik' => '3201234567890001',
-                'nama' => 'Ahmad Suryadi',
-                'jenis_kelamin' => 'L',
-                'agama' => 'Islam',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Merdeka No. 10',
-                'id_rt' => '001',
-                'rw' => '01',
-                'no_hp' => '081234567890',
-                'email' => 'ahmad.suryadi@email.com',
-            ],
-            [
-                'nik' => '3201234567890002',
-                'nama' => 'Siti Nurhaliza',
-                'jenis_kelamin' => 'P',
-                'agama' => 'Islam',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Merdeka No. 15',
-                'id_rt' => '002',
-                'rw' => '01',
-                'no_hp' => '081234567891',
-                'email' => 'siti.nurhaliza@email.com',
-            ],
-            [
-                'nik' => '3201234567890003',
-                'nama' => 'Budi Santoso',
-                'jenis_kelamin' => 'L',
-                'agama' => 'Kristen',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Proklamasi No. 5',
-                'id_rt' => '003',
-                'rw' => '01',
-                'no_hp' => '081234567892',
-                'email' => 'budi.santoso@email.com',
-            ],
-            [
-                'nik' => '3201234567890004',
-                'nama' => 'Dewi Lestari',
-                'jenis_kelamin' => 'P',
-                'agama' => 'Hindu',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Proklamasi No. 12',
-                'id_rt' => '004',
-                'rw' => '02',
-                'no_hp' => '081234567893',
-                'email' => 'dewi.lestari@email.com',
-            ],
-            [
-                'nik' => '3201234567890005',
-                'nama' => 'Eko Prasetyo',
-                'jenis_kelamin' => 'L',
-                'agama' => 'Islam',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Diponegoro No. 8',
-                'id_rt' => '005',
-                'rw' => '02',
-                'no_hp' => '081234567894',
-                'email' => 'eko.prasetyo@email.com',
-            ],
-            [
-                'nik' => '3201234567890006',
-                'nama' => 'Fitri Handayani',
-                'jenis_kelamin' => 'P',
-                'agama' => 'Islam',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Diponegoro No. 20',
-                'id_rt' => '006',
-                'rw' => '02',
-                'no_hp' => '081234567895',
-                'email' => 'fitri.handayani@email.com',
-            ],
-            [
-                'nik' => '3201234567890007',
-                'nama' => 'Ramadhani Prasetyo',
-                'jenis_kelamin' => 'L',
-                'agama' => 'Budha',
-                'status_tinggal' => 'Kontrak',
-                'alamat' => 'Jl. Sudirman No. 3',
-                'id_rt' => '001',
-                'rw' => '01',
-                'no_hp' => '081234567896',
-                'email' => 'gunawan.wijaya@email.com',
-            ],
-            [
-                'nik' => '3201234567890008',
-                'nama' => 'Hesti Purwanti',
-                'jenis_kelamin' => 'P',
-                'agama' => 'Kristen',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Sudirman No. 18',
-                'id_rt' => '002',
-                'rw' => '01',
-                'no_hp' => '081234567897',
-                'email' => 'hesti.purwanti@email.com',
-            ],
-            [
-                'nik' => '3201234567890009',
-                'nama' => 'Indra Kusuma',
-                'jenis_kelamin' => 'L',
-                'agama' => 'Islam',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Gatot Subroto No. 7',
-                'id_rt' => '003',
-                'rw' => '01',
-                'no_hp' => '081234567898',
-                'email' => 'indra.kusuma@email.com',
-            ],
-            [
-                'nik' => '3201234567890010',
-                'nama' => 'Joko Widodo',
-                'jenis_kelamin' => 'L',
-                'agama' => 'Islam',
-                'status_tinggal' => 'Tetap',
-                'alamat' => 'Jl. Gatot Subroto No. 25',
-                'id_rt' => '004',
-                'rw' => '02',
-                'no_hp' => '081234567899',
-                'email' => 'joko.widodo@email.com',
-            ],
-        ];
+        $filePath = base_path('WARGA-RW-010.xlsx');
+        if (! file_exists($filePath)) {
+            return;
+        }
 
-        foreach ($wargaData as $data) {
+        $spreadsheet = IOFactory::load($filePath);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray(null, true, true, true);
+
+        $headerRowIndex = null;
+        foreach ($rows as $idx => $row) {
+            foreach ($row as $cell) {
+                if (strtolower(trim((string) $cell)) === 'warga_nik') {
+                    $headerRowIndex = $idx;
+                    break 2;
+                }
+            }
+        }
+        if (! $headerRowIndex) {
+            return;
+        }
+
+        $headerRow = $rows[$headerRowIndex] ?? [];
+        $colByHeader = [];
+        foreach ($headerRow as $col => $header) {
+            $h = strtolower(trim((string) $header));
+            if ($h !== '') {
+                $colByHeader[$h] = $col;
+            }
+        }
+
+        $iuranIds = [];
+        for ($i = $headerRowIndex + 1; $i <= count($rows); $i++) {
+            $row = $rows[$i] ?? null;
+            if (! is_array($row)) {
+                continue;
+            }
+            $rawNikCell = (string) ($row[$colByHeader['warga_nik'] ?? ''] ?? '');
+            $rawNik = preg_replace('/\D/', '', $rawNikCell);
+            if ($rawNik === '') {
+                continue;
+            }
+            $iuranId = trim((string) ($row[$colByHeader['iuran_id'] ?? ''] ?? ''));
+            if ($iuranId !== '') {
+                $iuranIds[$iuranId] = true;
+            }
+        }
+
+        foreach (array_keys($iuranIds) as $iuranId) {
+            $exists = Iuran::query()->where('iuran_id', $iuranId)->exists();
+            if (! $exists) {
+                $iuran = new Iuran([
+                    'nama_iuran' => $iuranId,
+                    'jumlah_default' => 0,
+                    'deskripsi' => null,
+                ]);
+                $iuran->iuran_id = $iuranId;
+                $iuran->save();
+
+                continue;
+            }
+
+            Iuran::query()->where('iuran_id', $iuranId)->update([
+                'nama_iuran' => $iuranId,
+                'jumlah_default' => 0,
+                'deskripsi' => null,
+            ]);
+        }
+
+        for ($i = $headerRowIndex + 1; $i <= count($rows); $i++) {
+            $row = $rows[$i] ?? null;
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $rawNikCell = (string) ($row[$colByHeader['warga_nik'] ?? ''] ?? '');
+            $rawNik = preg_replace('/\D/', '', $rawNikCell);
+            if ($rawNik === '') {
+                continue;
+            }
+            $wargaNik = 'WRG-'.$rawNik;
+
+            $rtCell = trim((string) ($row[$colByHeader['no_rt_id'] ?? ''] ?? ''));
+            $rtNomor = preg_replace('/\D/', '', $rtCell);
+            $rtNomor = $rtNomor !== '' ? str_pad($rtNomor, 2, '0', STR_PAD_LEFT) : null;
+            $noRtId = null;
+            if ($rtNomor) {
+                $noRtId = NoRt::query()->where('nomor', $rtNomor)->value('no_rt_id');
+            }
+
+            $iuranId = trim((string) ($row[$colByHeader['iuran_id'] ?? ''] ?? '')) ?: null;
+
+            $rawPhone = trim((string) ($row[$colByHeader['no_hp'] ?? ''] ?? ''));
+            $phone = preg_replace('/\D/', '', $rawPhone);
+            if (is_string($phone) && strlen($phone) > 15) {
+                $phone = substr($phone, 0, 15);
+            }
+
+            $data = [
+                'warga_nik' => $wargaNik,
+                'email' => trim((string) ($row[$colByHeader['email'] ?? ''] ?? '')) ?: null,
+                'nama' => trim((string) ($row[$colByHeader['nama'] ?? ''] ?? '')),
+                'iuran_id' => $iuranId,
+                'jenis_kelamin' => trim((string) ($row[$colByHeader['jenis_kelamin'] ?? ''] ?? '')),
+                'agama' => trim((string) ($row[$colByHeader['agama'] ?? ''] ?? '')),
+                'status_tinggal' => trim((string) ($row[$colByHeader['status_tinggal'] ?? ''] ?? '')),
+                'alamat' => trim((string) ($row[$colByHeader['alamat'] ?? ''] ?? '')),
+                'no_rt_id' => $noRtId,
+                'no_hp' => $phone !== '' ? $phone : null,
+            ];
+
             Warga::updateOrCreate(
-                ['nik' => $data['nik']], // Cek berdasarkan NIK
+                ['warga_nik' => $wargaNik],
                 $data
             );
         }

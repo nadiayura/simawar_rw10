@@ -16,14 +16,14 @@ return new class extends Migration
             $table->date('tgl_pengajuan');
             $table->foreignId('id_warga')->constrained('wargas')->onDelete('cascade');
             $table->enum('jenis_pengaduan', [
-                'infrastruktur', 
-                'kebersihan', 
-                'keamanan', 
-                'sosial', 
+                'infrastruktur',
+                'kebersihan',
+                'keamanan',
+                'sosial',
                 'kesehatan',
                 'pendidikan',
                 'ekonomi',
-                'lainnya'
+                'lainnya',
             ]);
             $table->text('jdl_pengaduan');
             $table->enum('status', ['pending', 'diproses', 'selesai', 'ditolak'])->default('pending');

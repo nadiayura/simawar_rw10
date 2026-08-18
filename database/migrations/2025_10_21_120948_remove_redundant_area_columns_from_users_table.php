@@ -26,7 +26,7 @@ return new class extends Migration
             // Kembalikan kolom jika rollback
             $table->string('rt_area')->nullable();
             $table->string('rw_area')->nullable();
-            
+
             // Kembalikan index
             $table->index(['role_id', 'rt_area']);
             $table->index(['role_id', 'rw_area']);

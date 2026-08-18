@@ -13,12 +13,12 @@ class CreateKetuaRt extends CreateRecord
     public function mount(): void
     {
         // Check authorization before mounting the page
-        $user = auth()->user();
-        
-        if (!$user || !$user->role || $user->role->isRT()) {
+        $user = request()->user();
+
+        if (! $user || ! $user->role || $user->role->isRT()) {
             throw new AuthorizationException('You do not have permission to create this resource.');
         }
-        
+
         parent::mount();
     }
 }

@@ -23,7 +23,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->integer('urutan')->default(0); // untuk sorting
             $table->timestamps();
-            
+
             // Index untuk performance
             $table->index(['is_active', 'urutan']);
             $table->index('no_rt');

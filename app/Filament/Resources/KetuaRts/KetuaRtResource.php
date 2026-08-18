@@ -4,28 +4,24 @@ namespace App\Filament\Resources\KetuaRts;
 
 use App\Filament\Resources\KetuaRts\Pages\CreateKetuaRt;
 use App\Filament\Resources\KetuaRts\Pages\EditKetuaRt;
-use App\Filament\Resources\KetuaRts\Pages\ListKetuaRts;
 use App\Filament\Resources\KetuaRts\Schemas\KetuaRtForm;
 use App\Filament\Resources\KetuaRts\Tables\KetuaRtsTable;
 use App\Models\KetuaRt;
-use App\Models\Tenant;
 use BackedEnum;
-use Filament\Facades\Filament;
-use Illuminate\Support\Facades\Auth;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class KetuaRtResource extends Resource
 {
-
     protected static ?string $model = KetuaRt::class;
 
-    protected static string |UnitEnum|null $navigationGroup = 'Manajemen Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Manajemen Data';
 
     protected static ?string $navigationLabel = 'Struktural RT';
 
@@ -33,20 +29,19 @@ class KetuaRtResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Struktural RT';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
-    protected static ?string $recordTitleAttribute = 'id';
+    protected static ?string $recordTitleAttribute = 'ketua_rt_id';
 
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
 
-        /** @var Tenant $tenant */
-        $tenant = Filament::getTenant();
+        $user = Auth::user();
 
-        if ($tenant) {
-            // Filter ketua RT by tenant's RT
-            $query->where('no_rt', $tenant->no_rt);
+        // Jika user adalah Ketua RT, batasi data ke RT-nya (berdasarkan warga.no_rt_id)
+        if ($user && $user->role && $user->role->isRT() && $user->warga && $user->warga->no_rt_id) {
+            $query->where('no_rt_id', $user->warga->no_rt_id);
         }
 
         return $query;
@@ -72,7 +67,7 @@ class KetuaRtResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListKetuaRts::route('/'),
+            'index' => \App\Filament\Resources\KetuaRts\Pages\GroupedKetuaRts::route('/'),
             'create' => CreateKetuaRt::route('/create'),
             'edit' => EditKetuaRt::route('/{record}/edit'),
         ];
@@ -86,14 +81,12 @@ class KetuaRtResource extends Resource
     {
         $user = Auth::user();
 
-        if (!$user || !$user->role) {
+        if (! $user || ! $user->role) {
             return false;
         }
 
-        // Allow access for admin (no specific role check needed for admin)
-        // Allow access for RW users
-        // Deny access for RT users
-        return !$user->role->isRT();
+        // Tampilkan untuk Admin, RW, dan RT
+        return $user->role->isAdmin() || $user->role->isRW() || $user->role->isRT();
     }
 
     /**
@@ -103,12 +96,12 @@ class KetuaRtResource extends Resource
     {
         $user = Auth::user();
 
-        if (!$user || !$user->role) {
+        if (! $user || ! $user->role) {
             return false;
         }
 
-        // Allow admin and RW, deny RT
-        return !$user->role->isRT();
+        // Izinkan Admin, RW, dan RT
+        return $user->role->isAdmin() || $user->role->isRW() || $user->role->isRT();
     }
 
     /**
@@ -118,12 +111,12 @@ class KetuaRtResource extends Resource
     {
         $user = Auth::user();
 
-        if (!$user || !$user->role) {
+        if (! $user || ! $user->role) {
             return false;
         }
 
-        // Allow admin and RW, deny RT
-        return !$user->role->isRT();
+        // Admin & RW boleh buat; RT boleh buat untuk RT miliknya
+        return $user->role->isAdmin() || $user->role->isRW() || $user->role->isRT();
     }
 
     /**
@@ -133,12 +126,19 @@ class KetuaRtResource extends Resource
     {
         $user = Auth::user();
 
-        if (!$user || !$user->role) {
+        if (! $user || ! $user->role) {
             return false;
         }
 
-        // Allow admin and RW, deny RT
-        return !$user->role->isRT();
+        // Admin & RW boleh edit; RT hanya jika record RT sama
+        if ($user->role->isAdmin() || $user->role->isRW()) {
+            return true;
+        }
+
+        return $user->role->isRT()
+            && $user->warga
+            && $user->warga->no_rt_id
+            && (string) $record->no_rt_id === (string) $user->warga->no_rt_id;
     }
 
     /**
@@ -148,12 +148,18 @@ class KetuaRtResource extends Resource
     {
         $user = Auth::user();
 
-        if (!$user || !$user->role) {
+        if (! $user || ! $user->role) {
             return false;
         }
 
-        // Allow admin and RW, deny RT
-        return !$user->role->isRT();
-    }
+        // Admin & RW boleh delete; RT hanya jika record RT sama
+        if ($user->role->isAdmin() || $user->role->isRW()) {
+            return true;
+        }
 
+        return $user->role->isRT()
+            && $user->warga
+            && $user->warga->no_rt_id
+            && (string) $record->no_rt_id === (string) $user->warga->no_rt_id;
+    }
 }

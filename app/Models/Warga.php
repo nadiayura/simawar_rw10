@@ -2,38 +2,41 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
-use App\Models\Tenant;
-
+use Illuminate\Support\Str;
 
 class Warga extends Model
 {
     use HasFactory;
-    
+
+    protected $primaryKey = 'warga_nik';
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected $fillable = [
-        'nik',
+        'warga_nik',
         'nama',
         'jenis_kelamin',
         'agama',
         'status_tinggal',
         'alamat',
-        'id_rt',
         'rw',
         'no_hp',
         'email',
+        'iuran_id',
+        'no_rt_id',
     ];
 
     protected static function boot()
     {
         parent::boot();
-
-        // Update user when warga is updated
         static::updated(function ($warga) {
-            $user = User::where('warga_id', $warga->id)->first();
-            
+            $user = User::where('warga_nik', $warga->warga_nik)->first();
+
             if ($user) {
                 $user->update([
                     'name' => $warga->nama,
@@ -42,66 +45,89 @@ class Warga extends Model
             }
         });
     }
+
     public function ketuaRt()
     {
-        return $this->hasOne(KetuaRt::class, 'id_warga');
+        return $this->hasOne(KetuaRt::class, 'warga_nik');
     }
 
     public function user()
     {
-        return $this->hasOne(User::class, 'warga_id');
+        return $this->hasOne(User::class, 'warga_nik');
     }
 
-    public function tenant()
+    public function tagihanIuranWarga()
     {
-        // Simplified relationship - will be filtered by the resource query
-        return $this->belongsTo(Tenant::class, 'id_rt', 'no_rt');
+        return $this->hasMany(TagihanIuranWarga::class, 'warga_nik');
     }
 
     public function pengaduan()
     {
-        return $this->hasMany(Pengaduan::class, 'id_warga');
+        return $this->hasMany(Pengaduan::class, 'warga_nik');
     }
 
-    /**
-     * Create user account for this warga if it doesn't exist
-     */
-    public function createUserAccount()
+    public function iuran()
     {
-        if (!$this->email || $this->user) {
-            return null; // No email or user already exists
+        return $this->belongsTo(Iuran::class, 'iuran_id');
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'warga_nik';
+    }
+
+    public static function maskedNik(?string $wargaNik): ?string
+    {
+        if ($wargaNik === null || $wargaNik === '') {
+            return $wargaNik;
         }
 
-        // Check if user with this email already exists
-        $existingUser = User::where('email', $this->email)->first();
-        if ($existingUser) {
-            return null; // Email already taken
+        $prefix = 'WRG-';
+        $hasPrefix = substr((string) $wargaNik, 0, strlen($prefix)) === $prefix;
+        $raw = $hasPrefix ? substr((string) $wargaNik, strlen($prefix)) : (string) $wargaNik;
+        $digits = preg_replace('/\D/', '', $raw);
+
+        if ($digits === '') {
+            return $wargaNik;
         }
 
-        // Get the Warga role
-        $wargaRole = Role::where('name', 'warga')->first();
-        if (!$wargaRole) {
-            return null; // Warga role not found
+        $length = strlen($digits);
+
+        if ($length <= 4) {
+            return ($hasPrefix ? $prefix : '').$digits;
         }
 
-        // Create user account
-        $user = User::create([
+        $first = substr($digits, 0, 2);
+        $last = substr($digits, -2);
+        $maskedCount = max(0, $length - 4);
+
+        return ($hasPrefix ? $prefix : '').$first.str_repeat('*', $maskedCount).$last;
+    }
+
+    public function createUserAccount(?string $password = null): ?User
+    {
+        $existing = User::query()->where('warga_nik', $this->warga_nik)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $emailNorm = $this->email ? strtolower($this->email) : null;
+        if ($emailNorm && User::query()->where('email', $emailNorm)->exists()) {
+            $emailNorm = null;
+        }
+
+        $finalEmail = $emailNorm ?: Str::of($this->warga_nik)->lower()->append('@simawar.local')->toString();
+        if (User::query()->where('email', $finalEmail)->exists()) {
+            $finalEmail = Str::of($this->warga_nik)->lower()->append('+user@simawar.local')->toString();
+        }
+
+        $pwd = $password ?: 'password123';
+
+        return User::create([
             'name' => $this->nama,
-            'email' => $this->email,
-            'password' => Hash::make('password123'), // Use 'password123' as default password
-            'role_id' => $wargaRole->id,
-            'warga_id' => $this->id,
+            'email' => $finalEmail,
+            'password' => Hash::make($pwd),
+            'warga_nik' => $this->warga_nik,
         ]);
-
-        // Assign tenant based on RT
-        $tenant = Tenant::where('no_rt', $this->id_rt)
-                       ->where('rw', $this->rw)
-                       ->first();
-        
-        if ($tenant) {
-            $user->tenants()->attach($tenant->id);
-        }
-
-        return $user;
     }
 }

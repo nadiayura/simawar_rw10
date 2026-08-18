@@ -2,13 +2,12 @@
 
 namespace App\Filament\Resources\Wargas\Schemas;
 
+use App\Models\Iuran;
+use App\Models\NoRt;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Section;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
-use App\Models\KetuaRt;
-use Filament\Schemas\Components\Section as ComponentsSection;
 
 class WargaForm
 {
@@ -16,69 +15,57 @@ class WargaForm
     {
         return $schema
             ->components([
-                TextInput::make('nik')
+                TextInput::make('warga_nik')
+                    ->label('NIK')
+                    ->maxLength(16)
+                    ->dehydrateStateUsing(fn ($state) => $state ? ('WRG-'.$state) : null)
+                    ->afterStateHydrated(fn ($state, callable $set) => $state ? $set('warga_nik', (string) str_replace('WRG-', '', (string) $state)) : null)
                     ->required(),
                 TextInput::make('nama')
+                    ->label('Nama')
                     ->required(),
                 Select::make('jenis_kelamin')
                     ->options(['L' => 'L', 'P' => 'P'])
                     ->required(),
-                TextInput::make('agama')
+                Select::make('agama')
+                    ->options([
+                        'Islam' => 'Islam',
+                        'Kristen' => 'Kristen',
+                        'Katolik' => 'Katolik',
+                        'Hindu' => 'Hindu',
+                        'Buddha' => 'Buddha',
+                        'Konghucu' => 'Konghucu',
+                    ])
                     ->required(),
                 Select::make('status_tinggal')
                     ->options(['Tetap' => 'Tetap', 'Kontrak' => 'Kontrak', 'Sementara' => 'Sementara'])
                     ->required(),
                 Textarea::make('alamat')
                     ->required()
-                    ->columnSpanFull(),
-                Select::make('id_rt')
-                    ->options(function () {
-                        $options = [];
-                        for ($i = 1; $i <= 6; $i++) {
-                            // Coba kedua format: "1" dan "001"
-                            $ketuaRt = KetuaRt::where(function($query) use ($i) {
-                                $query->where('no_rt', (string)$i)
-                                      ->orWhere('no_rt', str_pad($i, 3, '0', STR_PAD_LEFT));
-                            })
-                            ->where('is_active', true)
-                            ->with('warga')
-                            ->first();
-
-                            $rtLabel = 'RT ' . str_pad($i, 2, '0', STR_PAD_LEFT);
-                            if ($ketuaRt && $ketuaRt->warga) {
-                                $rtLabel .= ' - ' . $ketuaRt->warga->nama;
-                            } else {
-                                $rtLabel .= ' - (Belum ada ketua)';
-                            }
-
-                            $options[str_pad($i, 3, '0', STR_PAD_LEFT)] = $rtLabel;
-                        }
-                        return $options;
-                    })
+                    ->maxLength(255),
+                Select::make('no_rt_id')
+                    ->label('Nomor RT')
+                    ->options(NoRt::query()->pluck('nomor', 'no_rt_id'))
+                    ->default(fn () => request()->get('no_rt_id'))
                     ->required(),
-                TextInput::make('rw')
-                    ->required(),
-                TextInput::make('no_hp'),
+                TextInput::make('no_hp')
+                    ->tel()
+                    ->required()
+                    ->maxLength(15),
                 TextInput::make('email')
                     ->label('Email address')
-                    ->email(),
-                
-                ComponentsSection::make('Akun Login (Opsional)')
-                    ->description('Jika email diisi, akun login akan otomatis dibuat. Password default adalah "password123" jika tidak diisi.')
-                    ->schema([
-                        TextInput::make('user_password')
-                            ->label('Password Login')
-                            ->password()
-                            ->dehydrated(false)
-                            ->helperText('Kosongkan untuk menggunakan "password123" sebagai password default'),
-                        TextInput::make('user_password_confirmation')
-                            ->label('Konfirmasi Password')
-                            ->password()
-                            ->dehydrated(false)
-                            ->same('user_password'),
-                    ])
-                    ->columns(2)
-                    ->collapsible(),
+                    ->email()
+                    ->required(),
+                Select::make('iuran_id')
+                    ->label('Iuran')
+                    ->options(function () {
+                        return Iuran::query()
+                            ->get()
+                            ->mapWithKeys(function ($iuran) {
+                                return [$iuran->iuran_id => $iuran->nama_iuran.' - '.$iuran->jumlah_default];
+                            });
+                    })
+                    ->required(),
             ]);
     }
 }

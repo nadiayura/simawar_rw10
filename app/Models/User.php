@@ -3,18 +3,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Models\Contracts\HasTenants;
-use Filament\Panel;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 
-class User extends Authenticatable implements FilamentUser, HasTenants
+class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, Notifiable;
 
@@ -28,7 +25,16 @@ class User extends Authenticatable implements FilamentUser, HasTenants
         'email',
         'password',
         'role_id',
-        'warga_id',
+        'warga_nik',
+    ];
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'role_id' => 8, // Default role_id untuk tamu
     ];
 
     /**
@@ -67,56 +73,59 @@ class User extends Authenticatable implements FilamentUser, HasTenants
      */
     public function warga(): BelongsTo
     {
-        return $this->belongsTo(Warga::class);
+        return $this->belongsTo(Warga::class, 'warga_nik');
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
-    }
+        $role = $this->role;
 
-    /**
-     * Get the tenants that belong to this user.
-     */
-    public function tenants(): BelongsToMany
-    {
-        return $this->belongsToMany(Tenant::class, 'tenant_user');
-    }
-
-    /**
-     * Get the tenants that a user can access.
-     */
-    public function getTenants(Panel $panel): Collection
-    {
-        // RW and admin users can access all tenants
-        if ($this->role && ($this->role->isRW() || $this->role->isAdmin())) {
-            return Tenant::where('is_active', true)->get();
+        if (! $role) {
+            return false;
         }
 
-        // RT users can only access their own tenant
-        return $this->tenants()->where('is_active', true)->get();
-    }
-
-    /**
-     * Check if user can access a specific tenant.
-     */
-    public function canAccessTenant(Model $tenant): bool
-    {
-        // RW and admin users can access all tenants
-        if ($this->role && ($this->role->isRW() || $this->role->isAdmin())) {
-            return true;
+        // Jika panel adalah warga dan user memiliki role warga, izinkan akses
+        if ($panel->getId() === 'warga') {
+            return $role && ($role->isWarga() || $role->isTamu() || $role->isRT() || $role->isRW() || $role->isAdmin());
         }
 
-        // RT users can only access their assigned tenants
-        return $this->tenants()->where('tenant_id', $tenant->id)->exists();
+        return $role && ($role->isRT() || $role->isRW() || $role->isAdmin());
+
+        // Jika panel adalah admin dan user memiliki role selain warga (RT atau RW), izinkan akses
+        if ($panel->getId() === 'admin') {
+            return $role->isRT() || $role->isRW();
+        }
     }
 
     /**
-     * Get the user's RT number if they are an RT leader.
+     * Get the panel that should be used as the user's home panel.
      */
+    public function getHomePanel(): ?string
+    {
+        $role = $this->role;
+
+        if (! $role) {
+            return null;
+        }
+
+        // Jika user adalah warga, arahkan ke panel warga
+        if ($role->isWarga()) {
+            return 'warga';
+        }
+
+        // Untuk role selain warga (RT dan RW), arahkan ke panel admin
+        return 'admin';
+    }
+
+    // Override method untuk mengabaikan verifikasi email
+    public function hasVerifiedEmail(): bool
+    {
+        return true; // Selalu mengembalikan true untuk mengabaikan verifikasi email
+    }
+
     public function getRTNumber(): ?string
     {
-        if ($this->role && $this->role->isRT() && $this->warga_id) {
+        if ($this->role && $this->role->isRT() && $this->warga_nik) {
             $warga = $this->warga;
             if ($warga && $warga->ketuaRt && $warga->ketuaRt->is_active) {
                 return $warga->ketuaRt->no_rt;
@@ -126,12 +135,9 @@ class User extends Authenticatable implements FilamentUser, HasTenants
         return null;
     }
 
-    /**
-     * Get the user's RW number.
-     */
     public function getRWNumber(): ?string
     {
-        if ($this->warga_id) {
+        if ($this->warga_nik) {
             $warga = $this->warga;
             if ($warga) {
                 return $warga->rw;
@@ -140,6 +146,4 @@ class User extends Authenticatable implements FilamentUser, HasTenants
 
         return null;
     }
-
-
 }

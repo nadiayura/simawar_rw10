@@ -19,12 +19,12 @@ return new class extends Migration
             $table->date('periode_selesai')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             // Index untuk pencarian yang sering dilakukan
             $table->index('no_rt');
             $table->index('id_warga');
             $table->index('is_active');
-            
+
             // Unique constraint untuk memastikan hanya ada satu ketua RT aktif per RT
             $table->unique(['no_rt', 'is_active']);
         });

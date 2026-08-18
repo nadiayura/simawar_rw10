@@ -4,22 +4,19 @@ namespace App\Filament\Resources\Wargas;
 
 use App\Filament\Resources\Wargas\Pages\CreateWarga;
 use App\Filament\Resources\Wargas\Pages\EditWarga;
-use App\Filament\Resources\Wargas\Pages\ListWargas;
+use App\Filament\Resources\Wargas\Pages\VerifikasiWarga;
 use App\Filament\Resources\Wargas\Schemas\WargaForm;
 use App\Filament\Resources\Wargas\Tables\WargasTable;
 use App\Models\Warga;
-use App\Models\Tenant;
 use BackedEnum;
-use Filament\Facades\Filament;
-use Illuminate\Support\Facades\Auth;
-use Filament\Panel;
 use Filament\Resources\Resource;
-use UnitEnum;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+use UnitEnum;
 
 class WargaResource extends Resource
 {
@@ -27,9 +24,11 @@ class WargaResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
-    protected static string |UnitEnum|null $navigationGroup = 'Manajemen Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Manajemen Data';
 
     protected static ?string $navigationLabel = 'Warga';
+
+    protected static ?string $pluralLabel = ' Data Warga';
 
     protected static ?string $recordTitleAttribute = 'id';
 
@@ -39,29 +38,23 @@ class WargaResource extends Resource
 
         $user = Auth::user();
 
-        // If user is RW, show all warga
+        // RW: lihat semua warga
         if ($user && $user->role && $user->role->isRW()) {
             return $query;
         }
 
-        // If user is RT, filter by their RT
+        // RT: batasi warga ke RT yang sama via warga.no_rt_id
         if ($user && $user->role && $user->role->isRT()) {
-            $rtNumber = $user->getRTNumber();
-            $rwNumber = $user->getRWNumber();
-
-            if ($rtNumber && $rwNumber) {
-                $query->where('id_rt', $rtNumber)
-                      ->where('rw', $rwNumber);
+            if ($user->warga && $user->warga->no_rt_id) {
+                $query->where('no_rt_id', $user->warga->no_rt_id);
             } else {
-                // If RT/RW info not available, return empty result
+                // Jika no_rt_id belum terisi, tampilkan kosong
                 $query->whereRaw('1 = 0');
             }
         }
 
         return $query;
     }
-
-
 
     public static function form(Schema $schema): Schema
     {
@@ -83,45 +76,53 @@ class WargaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListWargas::route('/'),
+            'index' => \App\Filament\Resources\Wargas\Pages\GroupedWargas::route('/'),
             'create' => CreateWarga::route('/create'),
             'edit' => EditWarga::route('/{record}/edit'),
+            'view' => \App\Filament\Resources\Wargas\Pages\ViewWarga::route('/{record:warga_nik}'),
+            'verifikasi' => VerifikasiWarga::route('/verifikasi'),
         ];
     }
 
     public static function canViewAny(): bool
     {
         $user = Auth::user();
-        return $user && $user->role && ($user->role->isRW() || $user->role->isRT());
+
+        return $user && $user->role && ($user->role->isRW() || $user->role->isRT() || $user->role->isAdmin());
     }
 
     public static function canCreate(): bool
     {
         $user = Auth::user();
-        return $user && $user->role && ($user->role->isRW() || $user->role->isRT());
+
+        return $user && $user->role && ($user->role->isRW() || $user->role->isRT() || $user->role->isAdmin());
     }
 
     public static function canEdit(Model $record): bool
     {
         $user = Auth::user();
-        return $user && $user->role && ($user->role->isRW() || $user->role->isRT());
+
+        return $user && $user->role && ($user->role->isRW() || $user->role->isRT() || $user->role->isAdmin());
     }
 
     public static function canDelete(Model $record): bool
     {
         $user = Auth::user();
-        return $user && $user->role && ($user->role->isRW() || $user->role->isRT());
+
+        return $user && $user->role && ($user->role->isRW() || $user->role->isRT() || $user->role->isAdmin());
     }
 
     public static function canDeleteAny(): bool
     {
         $user = Auth::user();
-        return $user && $user->role && ($user->role->isRW() || $user->role->isRT());
+
+        return $user && $user->role && ($user->role->isRW() || $user->role->isRT() || $user->role->isAdmin());
     }
 
     public static function shouldRegisterNavigation(): bool
     {
         $user = Auth::user();
-        return $user && $user->role && ($user->role->isRW() || $user->role->isRT());
+
+        return $user && $user->role && ($user->role->isRW() || $user->role->isRT() || $user->role->isAdmin());
     }
 }

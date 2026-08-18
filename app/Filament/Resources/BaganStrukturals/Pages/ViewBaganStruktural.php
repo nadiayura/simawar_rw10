@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\BaganStrukturals\Pages;
 
 use App\Filament\Resources\BaganStrukturals\BaganStrukturalResource;
+use App\Models\NoRt;
 use App\Models\Struktural;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class ViewBaganStruktural extends Page
 {
@@ -23,39 +23,55 @@ class ViewBaganStruktural extends Page
     {
         // Check if user has permission to view this page
         $user = Auth::user();
-        if (!$user || (!$user->role->isRT() && !$user->role->isRW() && !$user->role->isAdmin())) {
+        if (! $user || (! $user->role->isRT() && ! $user->role->isRW() && ! $user->role->isAdmin())) {
             abort(403, 'Unauthorized access');
         }
     }
 
     protected function getViewData(): array
     {
-        // Access structural data without tenant filtering since this represents
-        // the complete organizational structure that should be visible to all users
-        $structuralQuery = Struktural::withoutGlobalScopes()->with('warga')->active();
+        $structuralBase = Struktural::withoutGlobalScopes()->with('warga');
 
-        // Get RW structure data
         $rwStructure = [
-            'ketua' => $structuralQuery->clone()->where('jabatan', 'LIKE', '%Ketua RW%')->with('warga')->first(),
-            'sekretaris' => $structuralQuery->clone()->where('jabatan', 'LIKE', '%Sekretaris RW%')->with('warga')->first(),
-            'bendahara' => $structuralQuery->clone()->where('jabatan', 'LIKE', '%Bendahara RW%')->with('warga')->first(),
+            'ketua' => $structuralBase->clone()->active()->where('jabatan', 'LIKE', '%Ketua RW%')->first()
+                ?: $structuralBase->clone()->where('jabatan', 'LIKE', '%Ketua RW%')->first(),
+            'sekretaris' => $structuralBase->clone()->active()->where('jabatan', 'LIKE', '%Sekretaris RW%')->first()
+                ?: $structuralBase->clone()->where('jabatan', 'LIKE', '%Sekretaris RW%')->first(),
+            'bendahara' => $structuralBase->clone()->active()->where('jabatan', 'LIKE', '%Bendahara RW%')->first()
+                ?: $structuralBase->clone()->where('jabatan', 'LIKE', '%Bendahara RW%')->first(),
         ];
 
-        // Get RT structures data grouped by RT number
         $rtStructures = [];
-        $rtNumbers = ['001', '002', '003', '004', '005', '006'];
+        $rtMasters = NoRt::query()->orderBy('nomor')->get(['no_rt_id', 'nomor']);
 
-        foreach ($rtNumbers as $rtNumber) {
+        foreach ($rtMasters as $rt) {
+            $rtId = $rt->no_rt_id;
+            $rtNumber = str_pad((string) $rt->nomor, 2, '0', STR_PAD_LEFT);
+
             $rtStructures[$rtNumber] = [
-                'ketua' => $structuralQuery->clone()->ketuaRt()->where('no_rt', $rtNumber)->first(),
-                'sekretaris' => $structuralQuery->clone()
+                'ketua' => $structuralBase->clone()->active()
+                    ->ketuaRt()
+                    ->whereHas('warga', fn ($q) => $q->where('no_rt_id', $rtId))
+                    ->first()
+                    ?: $structuralBase->clone()->ketuaRt()
+                        ->whereHas('warga', fn ($q) => $q->where('no_rt_id', $rtId))
+                        ->first(),
+                'sekretaris' => $structuralBase->clone()->active()
                     ->where('jabatan', 'LIKE', '%Sekretaris RT%')
-                    ->where('no_rt', $rtNumber)
-                    ->first(),
-                'bendahara' => $structuralQuery->clone()
+                    ->whereHas('warga', fn ($q) => $q->where('no_rt_id', $rtId))
+                    ->first()
+                    ?: $structuralBase->clone()
+                        ->where('jabatan', 'LIKE', '%Sekretaris RT%')
+                        ->whereHas('warga', fn ($q) => $q->where('no_rt_id', $rtId))
+                        ->first(),
+                'bendahara' => $structuralBase->clone()->active()
                     ->where('jabatan', 'LIKE', '%Bendahara RT%')
-                    ->where('no_rt', $rtNumber)
-                    ->first(),
+                    ->whereHas('warga', fn ($q) => $q->where('no_rt_id', $rtId))
+                    ->first()
+                    ?: $structuralBase->clone()
+                        ->where('jabatan', 'LIKE', '%Bendahara RT%')
+                        ->whereHas('warga', fn ($q) => $q->where('no_rt_id', $rtId))
+                        ->first(),
             ];
         }
 

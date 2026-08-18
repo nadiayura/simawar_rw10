@@ -17,3 +17,14 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Data warga (jangan upload - repo public)
+simawar_db.sql
+WARGA-RW-010.xlsx
+*.xlsx
+
+# nested repo nyasar
+/simawar
+
+# vite temp
+vite.config.js.timestamp-*.mjs

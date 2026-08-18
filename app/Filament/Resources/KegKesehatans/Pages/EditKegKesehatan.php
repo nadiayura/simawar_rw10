@@ -13,7 +13,11 @@ class EditKegKesehatan extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+            DeleteAction::make()
+                ->modalHeading('Hapus Kegiatan Kesehatan')
+                ->modalDescription('Apakah Anda yakin ingin menghapus kegiatan kesehatan ini? Tindakan ini tidak dapat dibatalkan.')
+                ->modalSubmitActionLabel('Hapus')
+                ->modalCancelActionLabel('Batal'),
         ];
     }
 }

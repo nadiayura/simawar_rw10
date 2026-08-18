@@ -20,9 +20,11 @@ class PengaduanResource extends Resource
 {
     protected static ?string $model = Pengaduan::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHandRaised;
 
-    protected static ?string $recordTitleAttribute = 'id';
+    protected static ?string $recordTitleAttribute = 'pengaduan_id';
+
+    protected static ?string $pluralModelLabel = 'Pengaduan';
 
     public static function form(Schema $schema): Schema
     {
@@ -40,8 +42,8 @@ class PengaduanResource extends Resource
         $user = Auth::user();
 
         // Hanya tampilkan pengaduan dari warga yang sedang login
-        if ($user && $user->warga_id) {
-            return $query->where('id_warga', $user->warga_id);
+        if ($user && $user->warga_nik) {
+            return $query->where('warga_nik', $user->warga_nik);
         }
 
         // Jika user tidak memiliki warga_id, tidak tampilkan data apapun
@@ -60,7 +62,33 @@ class PengaduanResource extends Resource
         return [
             'index' => ListPengaduans::route('/'),
             'create' => CreatePengaduan::route('/create'),
-            'edit' => EditPengaduan::route('/{record}/edit'),
+            'edit' => EditPengaduan::route('/{record:pengaduan_id}/edit'),
         ];
+    }
+
+    // Membatasi akses resource pengaduan untuk role tamu
+    public static function shouldRegisterNavigation(): bool
+    {
+        $user = Auth::user();
+
+        // Jika user memiliki role tamu, sembunyikan resource pengaduan
+        if ($user && $user->role && $user->role->name === 'tamu') {
+            return false;
+        }
+
+        return true;
+    }
+
+    // Mencegah akses ke halaman pengaduan untuk role tamu
+    public static function canAccess(): bool
+    {
+        $user = Auth::user();
+
+        // Jika user memiliki role tamu, tolak akses ke resource pengaduan
+        if ($user && $user->role && $user->role->name === 'tamu') {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -4,13 +4,12 @@ namespace App\Filament\Resources\Pengaduans;
 
 use App\Filament\Resources\Pengaduans\Pages\CreatePengaduan;
 use App\Filament\Resources\Pengaduans\Pages\EditPengaduan;
-use App\Filament\Resources\Pengaduans\Pages\ListPengaduans;
+use App\Filament\Resources\Pengaduans\Pages\GroupedPengaduans;
+use App\Filament\Resources\Pengaduans\Pages\ViewPengaduan;
 use App\Filament\Resources\Pengaduans\Schemas\PengaduanForm;
 use App\Filament\Resources\Pengaduans\Tables\PengaduansTable;
 use App\Models\Pengaduan;
-use App\Models\Tenant;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -23,13 +22,39 @@ class PengaduanResource extends Resource
 {
     protected static ?string $model = Pengaduan::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHandRaised;
 
-    protected static string |UnitEnum|null $navigationGroup = 'Layanan Warga';
+    protected static string|UnitEnum|null $navigationGroup = 'Layanan Warga';
 
-    protected static ?string $navigationLabel='Pengaduan Warga';
+    protected static ?string $navigationLabel = 'Pengaduan Warga';
 
-    protected static ?string $recordTitleAttribute = 'id';
+    protected static ?string $pluralModelLabel = 'Pengaduan Warga';
+
+    protected static ?string $recordTitleAttribute = 'pengaduan_id';
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        $user = Auth::user();
+
+        // RW: lihat semua warga
+        if ($user && $user->role && $user->role->isRW()) {
+            return $query;
+        }
+
+        // RT: batasi warga ke RT yang sama via warga.no_rt_id
+        if ($user && $user->role && $user->role->isRT()) {
+            if ($user->warga && $user->warga->no_rt_id) {
+                $query->where('no_rt_id', $user->warga->no_rt_id);
+            } else {
+                // Jika no_rt_id belum terisi, tampilkan kosong
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -46,34 +71,25 @@ class PengaduanResource extends Resource
         $query = parent::getEloquentQuery();
         $user = Auth::user();
 
-        if (!$user || !$user->role) {
-            return $query->whereRaw('1 = 0'); // Return empty query if no user or role
+        if (! $user || ! $user->role) {
+            return $query->whereRaw('1 = 0');
         }
 
-        /** @var Tenant $tenant */
-        $tenant = Filament::getTenant();
-
-        if ($user->role->isAdmin()) {
-            // Admin dapat melihat semua pengaduan
+        // RW: lihat semua pengaduan
+        if ($user->role->isRW()) {
             return $query;
-        } elseif ($user->role->isRW()) {
-            // RW dapat melihat semua pengaduan dari RT dalam RW-nya
-            if ($tenant) {
-                // Konversi format RW tenant (2 digit) ke format warga (3 digit)
-                $tenantRwPadded = str_pad($tenant->rw, 3, '0', STR_PAD_RIGHT);
-                
-                $query->whereHas('warga', function($q) use ($tenantRwPadded) {
-                    $q->where('rw', $tenantRwPadded);
+        }
+
+        // RT: hanya lihat pengaduan dari warga dengan no_rt_id yang sama
+        if ($user->role->isRT()) {
+            if ($user->warga && $user->warga->no_rt_id) {
+                return $query->whereHas('warga', function ($q) use ($user) {
+                    $q->where('no_rt_id', $user->warga->no_rt_id);
                 });
+            } else {
+                // Jika RT belum memiliki no_rt_id, tampilkan kosong
+                return $query->whereRaw('1 = 0');
             }
-        } elseif ($user->role->isRT()) {
-            // RT hanya dapat melihat pengaduan dari RT sendiri
-            if ($tenant) {
-                $query->where('tenant_id', $tenant->id);
-            }
-        } else {
-            // Role lain tidak dapat mengakses pengaduan
-            return $query->whereRaw('1 = 0');
         }
 
         return $query;
@@ -89,9 +105,10 @@ class PengaduanResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListPengaduans::route('/'),
+            'index' => GroupedPengaduans::route('/'),
             'create' => CreatePengaduan::route('/create'),
-            'edit' => EditPengaduan::route('/{record}/edit'),
+            'edit' => EditPengaduan::route('/{record:pengaduan_id}/edit'),
+            'view' => ViewPengaduan::route('/{record:pengaduan_id}'),
         ];
     }
 }

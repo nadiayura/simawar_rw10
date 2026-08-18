@@ -4,9 +4,9 @@ namespace App\Filament\Warga\Resources\Pengaduans\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class PengaduansTable
 {
@@ -14,20 +14,35 @@ class PengaduansTable
     {
         return $table
             ->columns([
-                TextColumn::make('tenant.name')
-                    ->label('RT')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('pengaduan_id')
+                    ->label('No Pengaduan')
+                    ->searchable()
+                    ->hidden(),
                 TextColumn::make('tgl_pengajuan')
                     ->date()
                     ->sortable(),
-                TextColumn::make('warga.nama')
-                    ->label('Nama Warga')
+                TextColumn::make('status.keterangan')
+                    ->label('Status')
+                    ->badge(
+                        fn ($state): string => match (Str::lower((string) $state)) {
+                            'pending' => 'primary',
+                            'diproses' => 'info',
+                            'selesai' => 'success',
+                            'ditolak' => 'danger',
+                            default => 'gray',
+                        })
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('jenis_pengaduan'),
-                TextColumn::make('jdl_pengaduan')
+                TextColumn::make('jenisPengaduan.nama')
+                    ->label('Jenis Pengaduan')
                     ->searchable(),
+                TextColumn::make('jdl_pengaduan')
+                    ->label('Judul Pengaduan')
+                    ->searchable(),
+                TextColumn::make('solusi_admin')
+                    ->label('Solusi Admin')
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -41,8 +56,9 @@ class PengaduansTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
             ])
+            ->recordUrl(null)
+            ->recordAction(null)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

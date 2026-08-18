@@ -2,10 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\KetuaRt;
+use App\Models\NoRt;
 use App\Models\Warga;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class KetuaRtSeeder extends Seeder
 {
@@ -14,66 +15,63 @@ class KetuaRtSeeder extends Seeder
      */
     public function run(): void
     {
-        // Data ketua RT - menggunakan 6 warga pertama sebagai ketua RT
-        $ketuaRtData = [
-            [
-                'no_rt' => '001',
-                'nik_warga' => '3201234567890001', // Ahmad Suryadi
-                'periode_mulai' => '2024-01-01',
-                'periode_selesai' => '2026-12-31',
-                'is_active' => true,
+        $periodeMulai = '2023-01-01';
+        $periodeSelesai = '2027-12-31';
+
+        $mapping = [
+            '02' => [
+                'Ketua RT' => 'm.ismail',
+                'Sekretaris RT' => 'Tri sumarjoko',
+                'Bendahara RT' => 'Heri Agusti',
             ],
-            [
-                'no_rt' => '002',
-                'nik_warga' => '3201234567890002', // Siti Nurhaliza
-                'periode_mulai' => '2024-01-01',
-                'periode_selesai' => '2026-12-31',
-                'is_active' => true,
+            '03' => [
+                'Ketua RT' => 'saminanto',
+                'Sekretaris RT' => 'kardiyo',
+                'Bendahara RT' => 'Naat Sulaiman',
             ],
-            [
-                'no_rt' => '003',
-                'nik_warga' => '3201234567890003', // Budi Santoso
-                'periode_mulai' => '2024-01-01',
-                'periode_selesai' => '2026-12-31',
-                'is_active' => true,
+            '04' => [
+                'Ketua RT' => 'Suwardi',
+                'Sekretaris RT' => 'Indra',
+                'Bendahara RT' => 'Tatang Hanapi',
             ],
-            [
-                'no_rt' => '004',
-                'nik_warga' => '3201234567890004', // Dewi Lestari
-                'periode_mulai' => '2024-01-01',
-                'periode_selesai' => '2026-12-31',
-                'is_active' => true,
+            '05' => [
+                'Ketua RT' => 'suawarno',
+                'Sekretaris RT' => 'Rismansyah',
+                'Bendahara RT' => 'Yudi',
             ],
-            [
-                'no_rt' => '005',
-                'nik_warga' => '3201234567890005', // Eko Prasetyo
-                'periode_mulai' => '2024-01-01',
-                'periode_selesai' => '2026-12-31',
-                'is_active' => true,
-            ],
-            [
-                'no_rt' => '006',
-                'nik_warga' => '3201234567890006', // Fitri Handayani
-                'periode_mulai' => '2024-01-01',
-                'periode_selesai' => '2026-12-31',
-                'is_active' => true,
+            '06' => [
+                'Ketua RT' => 'sarkum Nurhadi',
+                'Sekretaris RT' => 'Ruly Anwar',
+                'Bendahara RT' => 'Arif Surahman',
             ],
         ];
 
-        foreach ($ketuaRtData as $data) {
-            // Cari warga berdasarkan NIK
-            $warga = Warga::where('nik', $data['nik_warga'])->first();
-            
-            if ($warga) {
+        foreach ($mapping as $rtNomor => $roles) {
+            $rt = NoRt::query()->where('nomor', $rtNomor)->first();
+            if (! $rt) {
+                continue;
+            }
+            $rtId = $rt->no_rt_id;
+
+            foreach ($roles as $jabatan => $nama) {
+                $namaLower = Str::lower(trim((string) $nama));
+                $warga = Warga::query()
+                    ->where('no_rt_id', $rtId)
+                    ->whereRaw('LOWER(nama) = ?', [$namaLower])
+                    ->first();
+
                 KetuaRt::updateOrCreate(
                     [
-                        'no_rt' => $data['no_rt'],
-                        'id_warga' => $warga->id
+                        'no_rt_id' => $rtId,
+                        'jabatan' => $jabatan,
+                        'is_active' => true,
                     ],
                     [
-                        'periode_mulai' => $data['periode_mulai'],
-                        'periode_selesai' => $data['periode_selesai'],
-                        'is_active' => $data['is_active'],
+                        'warga_nik' => $warga?->warga_nik,
+                        'alamat' => $warga?->alamat,
+                        'no_hp' => $warga?->no_hp,
+                        'periode_mulai' => $periodeMulai,
+                        'periode_selesai' => $periodeSelesai,
                     ]
                 );
             }

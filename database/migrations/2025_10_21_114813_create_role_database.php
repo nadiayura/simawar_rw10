@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('level'); // warga, rt, rw
             $table->integer('hierarchy_level'); // 1=warga, 2=rt, 3=rw
             $table->timestamps();
-            
+
             $table->index(['name', 'level']);
         });
     }

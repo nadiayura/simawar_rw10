@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\KetuaRts\Schemas;
 
+use App\Models\NoRt;
 use App\Models\Warga;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\Auth;
 
 class KetuaRtForm
 {
@@ -17,10 +17,18 @@ class KetuaRtForm
     {
         return $schema
             ->components([
-                TextInput::make('no_rt')
+                TextInput::make('no_rt_id')
                     ->label('Nomor RT')
-                    ->required()
-                    ->maxLength(3),
+                    ->default(fn () => request()->get('no_rt_id'))
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $noRt = NoRt::find($state);
+                            if ($noRt) {
+                                $set('nama', $noRt->nomor);
+                            }
+                        }
+                    })
+                    ->required(),
                 Select::make('jabatan')
                     ->label('Jabatan')
                     ->options([
@@ -28,51 +36,95 @@ class KetuaRtForm
                         'Sekretaris RT' => 'Sekretaris RT',
                         'Bendahara RT' => 'Bendahara RT',
                     ])
-                    ->default('Ketua RT')
-                    ->required(),
-
-                Select::make('id_warga')
-                    ->label('Pilih dari Data Warga')
-                    ->relationship('warga', 'nama')
-                    ->getOptionLabelFromRecordUsing(fn (Warga $record) => "RT {$record->id_rt} - {$record->nama}")
-                    ->getSearchResultsUsing(function (string $search) {
-                        $user = Auth::user();
-                        $tenant = Filament::getTenant();
-
-                        if (!$user || !$user->role) {
-                            return [];
+                    ->required()
+                    ->afterStateUpdated(function ($state, callable $set, $record, callable $get) {
+                        if (! $state || $record) {
+                            return;
                         }
 
-                        $query = Warga::where('nama', 'like', "%{$search}%");
-
-                        // For structural data, admin should be able to access all warga data
-                        // regardless of current tenant context
-                        if ($user->role->isRW() || $user->role->isAdmin()) {
-                            // RW/Admin can select warga from all RTs
-                            // No additional filtering needed - show all warga
-                        } elseif ($user->role->isRT()) {
-                            // RT users should not normally access this form, but if they do,
-                            // limit to their own RT
-                            if ($tenant) {
-                                $query->where('id_rt', $tenant->no_rt)
-                                      ->where('rw', str_pad($tenant->rw, 3, '0', STR_PAD_RIGHT));
-                            }
-                        } else {
-                            // Other roles cannot select warga
-                            return [];
+                        // Cek apakah jabatan sudah ada yang mengisi
+                        $rtId = $get('no_rt_id') ?? request()->get('no_rt_id');
+                        if (! $rtId && auth()->user()?->role?->isRT() && auth()->user()?->warga?->no_rt_id) {
+                            $rtId = auth()->user()->warga->no_rt_id;
                         }
 
-                        return $query->limit(50)->get()->mapWithKeys(function ($warga) {
-                            return [$warga->id => "RT {$warga->id_rt} - {$warga->nama}"];
+                        $exists = \App\Models\KetuaRt::query()
+                            ->where('jabatan', $state)
+                            ->when($rtId, fn ($q) => $q->where('no_rt_id', $rtId))
+                            ->where('is_active', true)
+                            ->exists();
+
+                        if ($exists) {
+                            // Reset nilai jabatan
+                            $set('jabatan', null);
+
+                            // Tampilkan notifikasi
+                            Notification::make()
+                                ->title('Jabatan sudah terisi')
+                                ->body('Jabatan sudah terisi pada RT '.(string) $rtId.'. Silakan nonaktifkan jabatan aktif terlebih dahulu atau pilih jabatan lain.')
+                                ->icon('heroicon-o-exclamation-triangle')
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
+                Select::make('warga_nik')
+                    ->label('Nama Warga')
+                    ->options(function (callable $get) {
+                        $user = request()->user();
+                        $rtId = $get('no_rt_id') ?? request()->get('no_rt_id');
+
+                        $query = Warga::query();
+
+                        if ($rtId) {
+                            $query->where('no_rt_id', $rtId);
+                        } elseif ($user && $user->role && $user->role->isRT() && $user->warga) {
+                            $query->where('no_rt_id', $user->warga->no_rt_id);
+                        }
+
+                        return $query->orderBy('nama')->get()->mapWithKeys(function ($w) {
+                            return [$w->warga_nik => "{$w->no_rt_id} - {$w->nama}"];
                         })->toArray();
                     })
-                    ->getOptionLabelsUsing(function (array $values) {
-                        return Warga::whereIn('id', $values)->get()->mapWithKeys(function ($warga) {
-                            return [$warga->id => "RT {$warga->id_rt} - {$warga->nama}"];
-                        })->toArray();
+                    ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $w = Warga::find($state);
+                            if ($w) {
+                                if ($w->alamat) {
+                                    $set('alamat', $w->alamat);
+                                }
+                                if ($w->no_hp) {
+                                    $set('no_hp', $w->no_hp);
+                                }
+                            }
+                        }
                     })
                     ->searchable()
-                    ->nullable(),
+                    ->required(),
+                TextInput::make('alamat')
+                    ->label('Alamat')
+                    ->disabled()
+                    ->dehydrated()
+                    ->default(function ($get) {
+                        $nik = $get('warga_nik');
+
+                        return optional(\App\Models\Warga::find($nik))->alamat;
+                    })
+                    ->afterStateHydrated(function (callable $set, callable $get) {
+                        $nik = $get('warga_nik');
+                        if (! $nik) {
+                            return;
+                        }
+
+                        $alamat = optional(\App\Models\Warga::find($nik))->alamat;
+                        if ($alamat) {
+                            $set('alamat', $alamat);
+                        }
+                    }),
+                TextInput::make('no_hp')
+                    ->label('No HP Aktif')
+                    ->required(),
                 DatePicker::make('periode_mulai')
                     ->label('Periode Mulai'),
                 DatePicker::make('periode_selesai')

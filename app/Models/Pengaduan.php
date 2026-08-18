@@ -9,100 +9,176 @@ class Pengaduan extends Model
 {
     protected $table = 'pengaduan';
 
+    protected $primaryKey = 'pengaduan_id';
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected $fillable = [
-        'tenant_id',
         'tgl_pengajuan',
-        'id_warga',
-        'jenis_pengaduan',
+        'warga_nik',
+        'jenis_pengaduan_id',
         'jdl_pengaduan',
-        'status',
+        'status_id',
         'detail_pengaduan',
-        'bukti'
+        'bukti',
+        'solusi_admin',
     ];
 
     protected $casts = [
         'tgl_pengajuan' => 'date',
-        'jenis_pengaduan' => 'string',
-        'status' => 'string'
     ];
 
-    // Relationship dengan Warga
+    protected static function booted(): void
+    {
+        static::creating(function (self $model) {
+            if (empty($model->status_id)) {
+                $model->status_id = \App\Models\Status::idForFitur('pengaduan', 'pending')
+                    ?? \App\Models\Status::idByName('pending');
+            }
+        });
+
+        static::created(function (self $model) {
+            $model->loadMissing('warga');
+
+            $warga = $model->warga;
+
+            if (! $warga) {
+                return;
+            }
+
+            $rtId = $warga->no_rt_id;
+
+            $rtRecipients = \App\Models\User::query()
+                ->whereHas('role', function ($query) {
+                    $query->where('level', 'rt_admin');
+                })
+                ->when($rtId, function ($query) use ($rtId) {
+                    $query->whereHas('warga', function ($wargaQuery) use ($rtId) {
+                        $wargaQuery->where('no_rt_id', $rtId);
+                    });
+                })
+                ->get();
+
+            $rwRecipients = \App\Models\User::query()
+                ->whereHas('role', function ($query) {
+                    $query->where('level', 'rw_admin');
+                })
+                ->get();
+
+            $adminRecipients = \App\Models\User::query()
+                ->whereHas('role', function ($query) {
+                    $query->where('level', 'admin');
+                })
+                ->get();
+
+            $recipients = $rtRecipients
+                ->merge($rwRecipients)
+                ->merge($adminRecipients)
+                ->unique('id');
+
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            $title = 'Pengaduan baru';
+
+            if ($warga->nama) {
+                $title .= ' dari '.$warga->nama;
+            }
+
+            $body = $model->jdl_pengaduan ?: $model->detail_pengaduan;
+
+            \Filament\Notifications\Notification::make()
+                ->title($title)
+                ->body($body)
+                ->icon('heroicon-o-megaphone')
+                ->color('warning');
+        });
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->pengaduan_id)) {
+                $baseDate = $model->tgl_pengajuan ? \Carbon\Carbon::parse($model->tgl_pengajuan) : now();
+                $dateStr = $baseDate->format('dmY');
+                $prefix = 'ADU-WRG-';
+                $last = static::query()
+                    ->where('pengaduan_id', 'like', $prefix.'%')
+                    ->orderBy('pengaduan_id', 'desc')
+                    ->first();
+                $seq = 1;
+                if ($last && is_string($last->pengaduan_id)) {
+                    $parts = explode('-', $last->pengaduan_id);
+                    $num = isset($parts[2]) ? (int) $parts[2] : 0;
+                    if ($num > 0) {
+                        $seq = $num + 1;
+                    }
+                }
+                $model->pengaduan_id = $prefix.str_pad((string) $seq, 3, '0', STR_PAD_LEFT).'-'.$dateStr;
+            }
+        });
+    }
+
     public function warga(): BelongsTo
     {
-        return $this->belongsTo(Warga::class, 'id_warga');
+        return $this->belongsTo(Warga::class, 'warga_nik');
     }
 
-    // Relationship dengan Tenant
-    public function tenant(): BelongsTo
+    public function status(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class, 'tenant_id');
+        return $this->belongsTo(Status::class, 'status_id');
     }
 
-    // Accessor untuk label jenis pengaduan
+    public function jenisPengaduan(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\JenisPengaduan::class, 'jenis_pengaduan_id');
+    }
+
     public function getJenisPengaduanLabelAttribute(): string
     {
-        return match($this->jenis_pengaduan) {
-            'infrastruktur' => 'Infrastruktur',
-            'kebersihan' => 'Kebersihan',
-            'keamanan' => 'Keamanan',
-            'sosial' => 'Sosial',
-            'kesehatan' => 'Kesehatan',
-            'pendidikan' => 'Pendidikan',
-            'ekonomi' => 'Ekonomi',
-            'lainnya' => 'Lainnya',
-            default => ucfirst($this->jenis_pengaduan)
-        };
-    }
+        if ($this->jenisPengaduan) {
+            return (string) $this->jenisPengaduan->nama;
+        }
 
-    // Accessor untuk label status
+        return ucfirst((string) ($this->getOriginal('jenis_pengaduan') ?? ''));
+    }
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status?->keterangan) {
             'pending' => 'Menunggu',
             'diproses' => 'Sedang Diproses',
             'selesai' => 'Selesai',
             'ditolak' => 'Ditolak',
-            default => ucfirst($this->status)
+            default => $this->status?->keterangan ?? ''
         };
     }
 
-    // Scope untuk filter berdasarkan status
     public function scopeByStatus($query, $status)
     {
-        return $query->where('status', $status);
-    }
-
-    // Scope untuk filter berdasarkan jenis pengaduan
-    public function scopeByJenis($query, $jenis)
-    {
-        return $query->where('jenis_pengaduan', $jenis);
-    }
-
-    // Scope untuk filter berdasarkan RT (melalui warga)
-    public function scopeByRt($query, $noRt)
-    {
-        return $query->whereHas('warga', function($q) use ($noRt) {
-            $q->where('no_rt', $noRt);
+        return $query->whereHas('status', function ($q) use ($status) {
+            $q->where('keterangan', $status);
         });
     }
 
-    // Scope untuk filter berdasarkan tenant
-    public function scopeByTenant($query, $tenantId)
+    public function scopeByJenis($query, $jenis)
     {
-        return $query->where('tenant_id', $tenantId);
+        if (is_numeric($jenis)) {
+            return $query->where('jenis_pengaduan_id', (int) $jenis);
+        }
+
+        return $query->whereHas('jenisPengaduan', function ($q) use ($jenis) {
+            $q->whereRaw('LOWER(nama) = ?', [strtolower((string) $jenis)]);
+        });
     }
 
-    // Scope untuk RT - hanya melihat pengaduan dari RT sendiri
-    public function scopeForRt($query, $tenantId)
+    public function scopeByRt($query, $noRt)
     {
-        return $query->where('tenant_id', $tenantId);
-    }
-
-    // Scope untuk RW - melihat semua pengaduan dari RT dalam RW
-    public function scopeForRw($query, $rwNumber)
-    {
-        return $query->whereHas('tenant', function($q) use ($rwNumber) {
-            $q->where('rw', $rwNumber);
+        return $query->whereHas('warga', function ($q) use ($noRt) {
+            $q->where('no_rt', $noRt);
         });
     }
 }

@@ -15,13 +15,13 @@ class DatabaseSeeder extends Seeder
     {
         // Seed roles first
         $this->call(RoleSeeder::class);
-        
+
         // Seed warga data
         $this->call(WargaSeeder::class);
-        
+
         // Seed ketua RT data (depends on warga)
         $this->call(KetuaRtSeeder::class);
-        
+
         // Seed user accounts (depends on warga and roles)
         $this->call(UserSeeder::class);
 

@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Warga;
-use App\Models\Role;
-use App\Models\KetuaRt;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
@@ -17,130 +16,63 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Ambil role yang sudah ada
-        $roleWarga = Role::where('name', 'warga')->first();
-        $roleRt = Role::where('name', 'rt')->first();
-        $roleRw = Role::where('name', 'rw')->first();
+        $roleAdmin = Role::where('name', 'admin')->first();
 
-        // Data user berdasarkan NIK warga
-        $userData = [
-            [
-                'nik' => '3201234567890001',
-                'name' => 'Ahmad Suryadi',
-                'email' => 'ahmad.suryadi@email.com',
-                'password' => 'password123',
-                'role' => 'rt', // Ketua RT
-            ],
-            [
-                'nik' => '3201234567890002',
-                'name' => 'Siti Nurhaliza',
-                'email' => 'siti.nurhaliza@email.com',
-                'password' => 'password123',
-                'role' => 'rt', // Ketua RT
-            ],
-            [
-                'nik' => '3201234567890003',
-                'name' => 'Budi Santoso',
-                'email' => 'budi.santoso@email.com',
-                'password' => 'password123',
-                'role' => 'rt', // Ketua RT
-            ],
-            [
-                'nik' => '3201234567890004',
-                'name' => 'Dewi Lestari',
-                'email' => 'dewi.lestari@email.com',
-                'password' => 'password123',
-                'role' => 'rt', // Ketua RT
-            ],
-            [
-                'nik' => '3201234567890005',
-                'name' => 'Eko Prasetyo',
-                'email' => 'eko.prasetyo@email.com',
-                'password' => 'password123',
-                'role' => 'rt', // Ketua RT
-            ],
-            [
-                'nik' => '3201234567890006',
-                'name' => 'Fitri Handayani',
-                'email' => 'fitri.handayani@email.com',
-                'password' => 'password123',
-                'role' => 'rt', // Ketua RT
-            ],
-            [
-                'nik' => '3201234567890007',
-                'name' => 'Gunawan Wijaya',
-                'email' => 'gunawan.wijaya@email.com',
-                'password' => 'password123',
-                'role' => 'warga', // Warga biasa
-            ],
-            [
-                'nik' => '3201234567890008',
-                'name' => 'Hesti Purwanti',
-                'email' => 'hesti.purwanti@email.com',
-                'password' => 'password123',
-                'role' => 'warga', // Warga biasa
-            ],
-            [
-                'nik' => '3201234567890009',
-                'name' => 'Indra Kusuma',
-                'email' => 'indra.kusuma@email.com',
-                'password' => 'password123',
-                'role' => 'warga', // Warga biasa
-            ],
-            [
-                'nik' => '3201234567890010',
-                'name' => 'Joko Widodo',
-                'email' => 'joko.widodo@email.com',
-                'password' => 'password123',
-                'role' => 'rw', // Ketua RW
-            ],
-        ];
+        $defaultPassword = 'password123';
+        $defaultRoleId = 1;
 
-        foreach ($userData as $data) {
-            // Cari warga berdasarkan NIK
-            $warga = Warga::where('nik', $data['nik'])->first();
-            
-            if ($warga) {
-                // Tentukan role_id berdasarkan role
-                $roleId = null;
-                switch ($data['role']) {
-                    case 'warga':
-                        $roleId = $roleWarga->id;
-                        break;
-                    case 'rt':
-                        $roleId = $roleRt->id;
-                        break;
-                    case 'rw':
-                        $roleId = $roleRw->id;
-                        break;
-                }
-
-                User::updateOrCreate(
-                    ['email' => $data['email']],
-                    [
-                        'name' => $data['name'],
-                        'password' => Hash::make($data['password']),
-                        'role_id' => $roleId,
-                        'warga_id' => $warga->id,
-                        'email_verified_at' => now(),
-                    ]
-                );
+        $wargas = Warga::query()->get(['warga_nik', 'nama', 'email']);
+        foreach ($wargas as $warga) {
+            $email = trim((string) $warga->email);
+            if ($email === '') {
+                $localPart = Str::lower((string) $warga->warga_nik);
+                $localPart = preg_replace('/[^a-z0-9]+/i', '.', $localPart) ?: 'warga';
+                $email = $localPart.'@simawar.test';
             }
+
+            $suffix = preg_replace('/\D/', '', (string) $warga->warga_nik);
+            if ($suffix === '') {
+                $suffix = Str::random(6);
+            }
+
+            $baseEmail = $email;
+            $local = Str::contains($baseEmail, '@') ? Str::before($baseEmail, '@') : $baseEmail;
+            $domain = Str::contains($baseEmail, '@') ? Str::after($baseEmail, '@') : 'simawar.test';
+            $local = $local !== '' ? $local : 'warga';
+            $domain = $domain !== '' ? $domain : 'simawar.test';
+
+            $conflict = User::query()
+                ->where('email', $email)
+                ->where(function ($q) use ($warga) {
+                    $q->whereNull('warga_nik')->orWhere('warga_nik', '!=', $warga->warga_nik);
+                })
+                ->exists();
+            if ($conflict) {
+                $email = $local.'.'.$suffix.'@'.$domain;
+            }
+
+            User::updateOrCreate(
+                ['warga_nik' => $warga->warga_nik],
+                [
+                    'name' => $warga->nama ?: $warga->warga_nik,
+                    'email' => $email,
+                    'password' => Hash::make($defaultPassword),
+                    'role_id' => $defaultRoleId,
+                    'email_verified_at' => now(),
+                ]
+            );
         }
 
-        // Buat user admin tambahan yang dapat mengakses semua tenant
         $admin = User::updateOrCreate(
             ['email' => 'admin@simawar.com'],
             [
                 'name' => 'Administrator',
                 'password' => Hash::make('admin123'),
-                'role_id' => $roleRw->id, // Admin sebagai RW
+                'role_id' => $roleAdmin?->id,
                 'email_verified_at' => now(),
             ]
         );
 
-        // Associate admin with all tenants
-        $allTenants = \App\Models\Tenant::all();
-        $admin->tenants()->syncWithoutDetaching($allTenants->pluck('id'));
+        // role-based only; no tenant association
     }
 }

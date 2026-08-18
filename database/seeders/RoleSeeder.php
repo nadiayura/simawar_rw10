@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Role;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class RoleSeeder extends Seeder
@@ -22,6 +21,13 @@ class RoleSeeder extends Seeder
                 'hierarchy_level' => 1,
             ],
             [
+                'name' => 'tamu',
+                'display_name' => 'Tamu',
+                'description' => 'Pengguna baru menunggu verifikasi, akses terbatas',
+                'level' => 'pending',
+                'hierarchy_level' => 0,
+            ],
+            [
                 'name' => 'rt',
                 'display_name' => 'Ketua RT',
                 'description' => 'Ketua RT yang dapat mengelola semua warga dalam RT yang dipimpinnya',
@@ -34,6 +40,13 @@ class RoleSeeder extends Seeder
                 'description' => 'Ketua RW yang dapat mengelola semua warga di semua RT dalam RW yang dipimpinnya',
                 'level' => 'rw_admin',
                 'hierarchy_level' => 3,
+            ],
+            [
+                'name' => 'admin',
+                'display_name' => 'Administrator',
+                'description' => 'Administrator sistem dengan akses penuh',
+                'level' => 'admin',
+                'hierarchy_level' => 4,
             ],
         ];
 

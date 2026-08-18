@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('rt_area')->nullable(); // RT yang dikelola (untuk user dengan role RT)
             $table->string('rw_area')->nullable(); // RW yang dikelola (untuk user dengan role RW)
             $table->foreignId('warga_id')->nullable()->constrained('wargas')->onDelete('set null'); // Relasi ke warga jika user adalah warga
-            
+
             $table->index(['role_id', 'rt_area']);
             $table->index(['role_id', 'rw_area']);
         });

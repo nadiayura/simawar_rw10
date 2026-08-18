@@ -15,11 +15,7 @@
             @if($rwStructure['ketua'])
             <div class="bg-blue-50 rounded-xl shadow-md p-4 w-56 text-center border-2 border-blue-300">
               <div class="w-16 h-16 rounded-full bg-gray-200 mx-auto mb-3 overflow-hidden">
-                @if($rwStructure['ketua']->foto)
-                  <img src="{{ Storage::url($rwStructure['ketua']->foto) }}" alt="{{ $rwStructure['ketua']->jabatan }}" class="w-full h-full object-cover">
-                @else
-                 <img src="https://ui-avatars.com/api/?name={{ urlencode($rwStructure['ketua']->warga ? $rwStructure['ketua']->warga->nama : $rwStructure['ketua']->nama) }}&background=3b82f6&color=ffffff&size=64" alt="{{ $rwStructure['ketua']->jabatan }}" class="w-full h-full object-cover">        
-                @endif
+                <img src="https://ui-avatars.com/api/?name={{ urlencode($rwStructure['ketua']->warga ? $rwStructure['ketua']->warga->nama : $rwStructure['ketua']->nama) }}&background=3b82f6&color=ffffff&size=64" alt="{{ $rwStructure['ketua']->jabatan }}" class="w-full h-full object-cover">
               </div>
              <h3 class="font-bold text-sm">{{ $rwStructure['ketua']->warga ? $rwStructure['ketua']->warga->nama : $rwStructure['ketua']->nama }}</h3>
               <p class="text-blue-600 font-medium text-xs">{{ $rwStructure['ketua']->jabatan }}</p>
@@ -40,18 +36,9 @@
             @if($rwStructure['sekretaris'])
             <div class="bg-green-50 rounded-xl shadow-lg p-4 w-56 mr-1.5 text-center border-2 border-green-300">
               <div class="w-16 h-16 rounded-full mx-auto mb-4 overflow-hidden bg-amber-800">
-                @if($rwStructure['sekretaris']->foto)
-                  <x-filament::avatar
-                    src="{{ Storage::url($rwStructure['sekretaris']->foto) }}"
-                    alt="Foto {{ $rwStructure['sekretaris']->nama }}"
-                    size="w-50 h-50"
-                    class="w-full h-full object-cover"
-                  />
-                @else
-                  <img src="https://ui-avatars.com/api/?name={{ urlencode($rwStructure['sekretaris']->warga ? $rwStructure['sekretaris']->warga->nama : $rwStructure['sekretaris']->nama) }}&background=10b981&color=ffffff&size=100"
-                       alt="{{ $rwStructure['sekretaris']->jabatan }}"
-                       class="w-50 h-50 rounded-full object-cover border-1 border-gray-300">
-                @endif
+                <img src="https://ui-avatars.com/api/?name={{ urlencode($rwStructure['sekretaris']->warga ? $rwStructure['sekretaris']->warga->nama : $rwStructure['sekretaris']->nama) }}&background=10b981&color=ffffff&size=100"
+                     alt="{{ $rwStructure['sekretaris']->jabatan }}"
+                     class="w-50 h-50 rounded-full object-cover border-1 border-gray-300">
               </div>
               <h3 class="font-bold text-lg text-black mb-1">{{ $rwStructure['sekretaris']->warga ? $rwStructure['sekretaris']->warga->nama : $rwStructure['sekretaris']->nama }}</h3>
               <p class="text-green-600 font-medium text-sm mb-2">{{ $rwStructure['sekretaris']->jabatan }}</p>
@@ -72,18 +59,9 @@
             @if($rwStructure['bendahara'])
             <div class="bg-yellow-50 rounded-xl shadow-lg p-4 w-56 ml-1.5 text-center border-2 border-yellow-300">
               <div class="w-16 h-16 rounded-full mx-auto mb-4 ml-1.5 overflow-hidden bg-amber-800">
-                @if($rwStructure['bendahara']->foto)
-                  <x-filament::avatar
-                    src="{{ Storage::url($rwStructure['bendahara']->foto) }}"
-                    alt="Foto {{ $rwStructure['bendahara']->nama }}"
-                    size="w-50 h-50"
-                    class="w-full h-full object-cover"
-                  />
-                @else
-                  <img src="https://ui-avatars.com/api/?name={{ urlencode($rwStructure['bendahara']->warga ? $rwStructure['bendahara']->warga->nama : $rwStructure['bendahara']->nama) }}&background=f59e0b&color=ffffff&size=80"
-                       alt="{{ $rwStructure['bendahara']->jabatan }}"
-                       class="w-20 h-20 rounded-full object-cover border-2 border-gray-300">
-                @endif
+                <img src="https://ui-avatars.com/api/?name={{ urlencode($rwStructure['bendahara']->warga ? $rwStructure['bendahara']->warga->nama : $rwStructure['bendahara']->nama) }}&background=f59e0b&color=ffffff&size=80"
+                     alt="{{ $rwStructure['bendahara']->jabatan }}"
+                     class="w-20 h-20 rounded-full object-cover border-2 border-gray-300">
               </div>
               <h3 class="font-bold text-lg text-black mb-1">{{ $rwStructure['bendahara']->warga ? $rwStructure['bendahara']->warga->nama : $rwStructure['bendahara']->nama }}</h3>
               <p class="text-yellow-600 font-medium text-sm mb-2">{{ $rwStructure['bendahara']->jabatan }}</p>

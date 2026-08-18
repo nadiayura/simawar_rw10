@@ -3,13 +3,13 @@
 namespace App\Filament\Resources\Strukturals\Schemas;
 
 use App\Models\Warga;
-use Filament\Facades\Filament;
-use Filament\Forms\Components\FileUpload;
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\Auth;
 
 class StrukturalForm
 {
@@ -18,185 +18,122 @@ class StrukturalForm
         return $schema
             ->components([
                 TextInput::make('nama')
-                    ->required()
-                    ->maxLength(255)
-                    ->label('Nama Lengkap'),
+                    ->disabled(),
+                Select::make('warga_nik')
+                    ->label('Nama Warga')
+                    ->options(function (callable $get) {
+                        $user = request()->user();
+                        $rtId = $get('no_rt_id') ?? request()->get('no_rt_id');
 
-                Select::make('id_warga')
-                    ->label('Pilih dari Data Warga')
-                    ->relationship('warga', 'nama')
-                    ->getOptionLabelFromRecordUsing(fn (Warga $record) => "RT {$record->id_rt} - {$record->nama}")
-                    ->live()
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        if ($state) {
-                            $warga = Warga::find($state);
-                            if ($warga) {
-                                // Auto-fill nama field with warga's name
-                                $set('nama', $warga->nama);
-                            }
-                        }
-                    })
-                    ->getSearchResultsUsing(function (string $search) {
-                        $user = Auth::user();
+                        $query = Warga::query();
 
-                        if (!$user || !$user->role) {
-                            return [];
+                        if ($rtId) {
+                            $query->where('no_rt_id', $rtId);
+                        } elseif ($user && $user->role && $user->role->isRT() && $user->warga) {
+                            $query->where('no_rt_id', $user->warga->no_rt_id);
                         }
 
-                        // PENTING: Untuk admin, selalu tampilkan semua warga tanpa filter RT
-                        if ($user->role->isRW() || $user->role->isAdmin()) {
-                            // Tampilkan semua warga tanpa filter tenant/RT
-                            $query = Warga::where('nama', 'like', "%{$search}%");
-
-                            return $query->limit(50)->get()->mapWithKeys(function ($warga) {
-                                return [$warga->id => "RT {$warga->id_rt} - {$warga->nama}"];
-                            })->toArray();
-                        } elseif ($user->role->isRT()) {
-                            // RT users should not normally access this form
-                            $tenant = Filament::getTenant();
-                            if ($tenant) {
-                                $query = Warga::where('nama', 'like', "%{$search}%")
-                                    ->where('id_rt', $tenant->no_rt)
-                                    ->where('rw', str_pad($tenant->rw, 3, '0', STR_PAD_RIGHT));
-
-                                return $query->limit(50)->get()->mapWithKeys(function ($warga) {
-                                    return [$warga->id => "RT {$warga->id_rt} - {$warga->nama}"];
-                                })->toArray();
-                            }
-                        }
-
-                        // Default: empty results
-                        return [];
-                    })
-                    ->getOptionLabelsUsing(function (array $values) {
-                        return Warga::whereIn('id', $values)->get()->mapWithKeys(function ($warga) {
-                            return [$warga->id => "RT {$warga->id_rt} - {$warga->nama}"];
+                        return $query->orderBy('nama')->get()->mapWithKeys(function ($w) {
+                            return [$w->warga_nik => "{$w->no_rt_id} - {$w->nama}"];
                         })->toArray();
                     })
+                    ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $w = Warga::find($state);
+                            if ($w) {
+                                $set('nama', $w->nama);
+                                if ($w->alamat) {
+                                    $set('alamat', $w->alamat);
+                                }
+                                if ($w->no_hp) {
+                                    $set('no_hp', $w->no_hp);
+                                }
+                            }
+                        }
+                    })
                     ->searchable()
-                    ->nullable(),
-
+                    ->required(),
+                Textarea::make('alamat')
+                    ->label('Alamat')
+                    ->disabled()
+                    ->dehydrated(false),
+                TextInput::make('no_hp')
+                    ->label('No HP Aktif')
+                    ->disabled()
+                    ->dehydrated(false),
                 Select::make('jabatan')
-                    ->required()
-                    ->label('Jabatan')
                     ->options([
                         'Ketua RW' => 'Ketua RW',
                         'Sekretaris RW' => 'Sekretaris RW',
                         'Bendahara RW' => 'Bendahara RW',
-                        'Ketua RT' => 'Ketua RT',
-                        'Sekretaris RT' => 'Sekretaris RT',
-                        'Bendahara RT' => 'Bendahara RT'
                     ])
-                    ->default('Ketua RW')
+                    ->required()
                     ->live()
-                    ->rules([
-                        function () {
-                            return function (string $attribute, $value, \Closure $fail) {
-                                // Get the current record ID if editing
-                                $recordId = request()->route('record');
-
-                                // Get form data to check no_rt
-                                $formData = request()->all();
-                                $noRt = $formData['data']['no_rt'] ?? null;
-
-                                // For RW positions, no_rt should be null
-                                if (in_array($value, ['Ketua RW', 'Sekretaris RW', 'Bendahara RW'])) {
-                                    $noRt = null;
-                                }
-
-                                // Check for duplicate jabatan + no_rt combination
-                                $query = \App\Models\Struktural::where('jabatan', $value)
-                                    ->where('is_active', true)
-                                    ->when($recordId, function ($query) use ($recordId) {
-                                        return $query->where('id', '!=', $recordId);
-                                    });
-
-                                // For RW positions, check where no_rt is null
-                                if (in_array($value, ['Ketua RW', 'Sekretaris RW', 'Bendahara RW'])) {
-                                    $query->whereNull('no_rt');
-
-                                    // Strict validation for RW positions - must be unique across all RTs
-                                    $existingRecord = $query->first();
-
-                                    if ($existingRecord) {
-                                        $fail("Jabatan {$value} sudah ada dan aktif. Setiap jabatan RW hanya boleh dipegang oleh satu orang.");
-                                    }
-                                } else {
-                                    // For RT positions, check specific RT
-                                    if ($noRt) {
-                                        $query->where('no_rt', $noRt);
-
-                                        $existingRecord = $query->first();
-
-                                        if ($existingRecord) {
-                                            $fail("Jabatan {$value} untuk RT {$noRt} sudah ada dan aktif. Setiap jabatan RT hanya boleh dipegang oleh satu orang per RT.");
-                                        }
-                                    } else {
-                                        $fail("Nomor RT harus diisi untuk jabatan {$value}.");
-                                    }
-                                }
-                            };
+                    ->afterStateUpdated(function ($state, callable $set, $record, callable $get) {
+                        if (! $state || $record) {
+                            return;
                         }
-                    ]),
 
-                // Select::make('no_rt')
-                //     ->label('Nomor RT')
-                //     ->options([
-                //         '001' => 'RT 001',
-                //         '002' => 'RT 002',
-                //         '003' => 'RT 003',
-                //         '004' => 'RT 004',
-                //         '005' => 'RT 005',
-                //         '006' => 'RT 006'
-                //     ])
-                //     ->nullable()
-                //     ->helperText('Kosongkan untuk jabatan tingkat RW (Ketua RW, Sekretaris RW, Bendahara RW)')
-                //     ->hidden(fn (callable $get) => in_array($get('jabatan'), ['Ketua RW', 'Sekretaris RW', 'Bendahara RW']))
-                //     ->rules([
-                //         function () {
-                //             return function (string $attribute, $value, \Closure $fail) {
-                //                 $formData = request()->all();
-                //                 $jabatan = $formData['jabatan'] ?? null;
+                        $exists = \App\Models\Struktural::query()
+                            ->where('jabatan', $state)
+                            ->where('is_active', true)
+                            ->exists();
 
-                //                 // RT positions must have no_rt
-                //                 if (in_array($jabatan, ['Ketua RT', 'Sekretaris RT', 'Bendahara RT']) && empty($value)) {
-                //                     $fail('Nomor RT wajib diisi untuk jabatan tingkat RT.');
-                //                 }
+                        if ($exists) {
+                            $set('jabatan', null);
 
-                //                 // RW positions should not have no_rt
-                //                 if (in_array($jabatan, ['Ketua RW', 'Sekretaris RW', 'Bendahara RW']) && !empty($value)) {
-                //                     $fail('Nomor RT tidak boleh diisi untuk jabatan tingkat RW.');
-                //                 }
-                //             };
-                //         }
-                //     ]),
+                            \Filament\Notifications\Notification::make()
+                                ->title('Jabatan RW sudah terisi')
+                                ->body('Silakan nonaktifkan jabatan aktif terlebih dahulu atau pilih jabatan lain.')
+                                ->icon('heroicon-o-exclamation-triangle')
+                                ->danger()
+                                ->actions([
+                                    Action::make('close')
+                                        ->label('Tutup')
+                                        ->button()
+                                        ->color('danger'),
+                                ])
+                                ->persistent()
+                                ->send();
+                        }
 
-                FileUpload::make('foto')
-                    ->required()
-                    ->label('Foto Profil')
-                    ->directory('public/Struktural')
-                    ->visibility('public')
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg'])
-                    ->maxSize(2048)
-                    ->helperText('Upload foto profil (maksimal 2MB, format: JPG, PNG)'),
-
-                TextInput::make('periode_mulai')
-                    ->required()
-                    ->maxLength(255)
-                    ->label('Periode Mulai')
-                    ->placeholder('Contoh: 2024')
-                    ->helperText('Tahun mulai menjabat'),
-
-                TextInput::make('periode_selesai')
-                    ->required()
-                    ->maxLength(255)
-                    ->label('Periode Selesai')
-                    ->placeholder('Contoh: 2027')
-                    ->helperText('Tahun selesai menjabat'),
-
+                        $nik = $get('warga_nik');
+                        if ($nik && str_contains(strtolower($state), 'ketua rt')) {
+                            $w = \App\Models\Warga::find($nik);
+                            $rtId = $w?->no_rt_id;
+                            if ($rtId) {
+                                $dupRt = \App\Models\Struktural::query()
+                                    ->ketuaRt()
+                                    ->where('is_active', true)
+                                    ->whereHas('warga', fn ($q) => $q->where('no_rt_id', $rtId))
+                                    ->exists();
+                                if ($dupRt) {
+                                    $set('jabatan', null);
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Ketua RT sudah terisi')
+                                        ->body('Ketua RT pada RT ini sudah terisi. Nonaktifkan data aktif terlebih dahulu atau pilih jabatan lain.')
+                                        ->icon('heroicon-o-exclamation-triangle')
+                                        ->danger()
+                                        ->persistent()
+                                        ->send();
+                                }
+                            }
+                        }
+                    }),
+                DatePicker::make('periode_mulai')
+                    ->required(),
+                DatePicker::make('periode_selesai')
+                    ->required(),
+                Textarea::make('deskripsi'),
                 Toggle::make('is_active')
-                    ->default(true)
-                    ->label('Status Aktif'),
+                    ->required()
+                    ->default(true),
+                TextInput::make('urutan')
+                    ->required()
+                    ->numeric()
+                    ->default(0)
+                    ->hidden(),
             ]);
     }
 }

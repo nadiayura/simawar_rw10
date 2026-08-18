@@ -32,7 +32,15 @@ class Role extends Model
      */
     public function isWarga(): bool
     {
-        return $this->level === 'warga';
+        return $this->level === 'basic' || $this->name === 'warga';
+    }
+
+    /**
+     * Check if role is Tamu level
+     */
+    public function isTamu(): bool
+    {
+        return $this->level === 'pending' || $this->name === 'tamu';
     }
 
     /**
@@ -68,6 +76,7 @@ class Role extends Model
             'warga' => 1,
             'rt' => 2,
             'rw' => 3,
+            'tamu' => 0,
         ];
 
         return $this->hierarchy_level >= ($levelHierarchy[$level] ?? 0);

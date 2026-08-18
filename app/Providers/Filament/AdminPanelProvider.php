@@ -5,11 +5,9 @@ namespace App\Providers\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -17,8 +15,6 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Models\Tenant;
-
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -28,29 +24,28 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('/admin')
-            ->login()
-            ->brandName('Simawar')
-            ->tenant(Tenant::class)
-            ->tenantRegistration(null)
-            ->tenantProfile(null)
-            ->tenantMenuItems([
-                // Add custom tenant menu items if needed
-            ])
+            ->login(\App\Filament\Pages\Auth\AdminLogin::class)
+            ->profile(\App\Filament\Pages\Auth\AdminEditProfile::class)
+            ->homeUrl('/admin')
+            ->brandName('SIMAWAR 10 | ADMIN')
+            ->favicon('/storage/logo/logoutama.png')
             ->colors([
-                'primary' => Color::Blue,
-                'Katar' => '#00b8db',
-                'Posyandu' => '#fb64b6',
-                'Umum'=> '#90a1b9',
+                'primary' => Color::hex('#2ea7d6'),
             ])
-            // ->viteTheme('resources/css/app.css')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+            ->resources([
+                \App\Filament\Resources\RekapKeuangans\RekapKeuanganResource::class,
+            ])
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                \App\Filament\Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
+                \App\Filament\Widgets\DashboardStats::class,
+                \App\Filament\Widgets\PengaduanCategoryChart::class,
+                \App\Filament\Widgets\SuratCategoryChart::class,
+                \App\Filament\Widgets\KeuanganRtChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,

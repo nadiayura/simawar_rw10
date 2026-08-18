@@ -2,63 +2,42 @@
 
 namespace App\Filament\Warga\Resources\Pengaduans\Schemas;
 
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
+use App\Models\Status;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+// no tenant usage
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Tenant;
-use Filament\Forms\Components\FileUpload;
 
 class PengaduanForm
 {
     public static function configure(Schema $schema): Schema
     {
         $user = Auth::user();
-        $warga = $user?->warga;
-
-        // Cari tenant berdasarkan id_rt dari warga
-        $tenant = null;
-        if ($warga && $warga->id_rt) {
-            $tenant = Tenant::where('no_rt', $warga->id_rt)->first();
-        }
 
         return $schema
             ->components([
-                // Hidden field untuk tenant_id yang otomatis diisi berdasarkan id_rt warga
-                Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Hidden::make('tgl_pengajuan')
+                    ->default(fn () => now()->toDateString()),
 
-                DatePicker::make('tgl_pengajuan')
-                    ->required()
-                    ->default(now()),
+                Hidden::make('warga_nik')
+                    ->default($user?->warga_nik),
 
-                // Hidden field untuk id_warga yang otomatis diisi dari user login
-                Hidden::make('id_warga')
-                    ->default($user?->warga_id),
-
-                Select::make('jenis_pengaduan')
-                    ->options([
-                        'infrastruktur' => 'Infrastruktur',
-                        'kebersihan' => 'Kebersihan',
-                        'keamanan' => 'Keamanan',
-                        'sosial' => 'Sosial',
-                        'kesehatan' => 'Kesehatan',
-                        'pendidikan' => 'Pendidikan',
-                        'ekonomi' => 'Ekonomi',
-                        'lainnya' => 'Lainnya',
-                    ])
+                Select::make('jenis_pengaduan_id')
+                    ->label('Jenis Pengaduan')
+                    ->options(fn () => \App\Models\JenisPengaduan::query()->orderBy('nama')->pluck('nama', 'id')->toArray())
+                    ->searchable()
                     ->required(),
 
                 TextInput::make('jdl_pengaduan')
                     ->label('Judul Pengaduan')
                     ->required(),
 
-                // Hidden field untuk status dengan default pending
-                Hidden::make('status')
-                    ->default('pending'),
+                Hidden::make('status_id')
+                    ->default(Status::idForFitur('pengaduan', 'Pending')),
 
                 Textarea::make('detail_pengaduan')
                     ->label('Detail Pengaduan')
@@ -66,13 +45,15 @@ class PengaduanForm
                     ->columnSpanFull(),
 
                 FileUpload::make('bukti')
+                    ->hint('Format file: JPEG, PNG, WebP. Maksimal ukuran: 2MB')
                     ->required()
                     ->label('Bukti')
                     ->image()
                     ->directory('public/Pengaduan')
+                    ->columnSpanFull()
                     ->visibility('public')
                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                    ->maxSize(2048)
+                    ->maxSize(2048),
             ]);
     }
 }

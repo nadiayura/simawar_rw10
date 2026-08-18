@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('no_hp', 15)->nullable();
             $table->string('email')->nullable();
             $table->timestamps();
-            
+
             // Index untuk pencarian yang sering dilakukan
             $table->index('nik');
             $table->index('id_rt');
